@@ -21,6 +21,7 @@ logging.basicConfig(
 api_module_log = logging.getLogger('ApiModule')
 
 
+# TODO: [完善注释]
 class ApiClient:
     def __init__(self, config_manager):
         self.config_manager = config_manager
@@ -86,6 +87,7 @@ class ApiClient:
         rsp = self._post_request(url, headers, data, '获取打卡信息失败')
         return rsp.get('data', {})[0]
 
+    # TODO: [打卡备注、图片]
     def submit_clock_in(self, checkin_info):
         url = 'attendence/clock/v4/save'
         api_module_log.info(f'打卡类型：{checkin_info.get("type")}')
@@ -162,3 +164,5 @@ class ApiClient:
         if sign_data:
             headers['sign'] = create_sign(*sign_data)
         return headers
+
+    # TODO: [日报、周报、月报相关Api]
