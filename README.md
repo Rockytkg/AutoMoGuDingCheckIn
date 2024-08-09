@@ -46,24 +46,24 @@ AutoMoGuDingCheckIn 旨在：
 
 1. 打开user目录，根据下表修改json文件中的配置（每个文件就是一个用户）
 
-| 字段名                        | 数据类型      | 描述                             | 示例                             | 是否必须填写 |
-|----------------------------|-----------|--------------------------------|--------------------------------|--------|
-| `phone`                    | `string`  | 手机号                            | `"1234567890"`                 | 必须     |
-| `password`                 | `string`  | 工学云密码                          | `"your_password"`              | 必须     |
-| `address`                  | `string`  | 打卡地点，用于工学云显示（格式参照example.json） | `"四川省 · 成都市 · 高新区 · 在科创十一街附近"` | 必须     |
-| `latitude`                 | `string`  | 打卡的纬度，精确到小数点后六位                | `"34.051122"`                  | 必须     |
-| `longitude`                | `string`  | 打卡的经度，精确到小数点后六位                | `"-118.241137"`                | 必须     |
-| `province`                 | `string`  | 打卡的省份                          | `"四川省"`                        | 必须     |
-| `city`                     | `string`  | 打卡的城市                          | `"成都市"`                        | 必须     |
-| `area`                     | `string`  | 打卡的县/区                         | `"高新区"`                        | 必须     |
-| `device`                   | `string`  | 设备信息（参照example.json）           | `"设备信息"`                       | 必须     |
-| `is_submit_daily`          | `boolean` | 是否提交日报                         | `false`                        | 必须     |
-| `is_submit_weekly`         | `boolean` | 是否提交周报                         | `false`                        | 必须     |
-| `is_submit_month_report`   | `boolean` | 是否提交月报                         | `false`                        | 必须     |
-| `submit_weekly_time`       | `string`  | 周报提交时间                         | `"1"`                          | 不必须    |
-| `submit_month_report_time` | `string`  | 月报提交时间                         | `"2"`                          | 不必须    |
-| `pushType`                 | `string`  | 推送方式                           | `"server"` 或 `"pushplus"`      | 不必须    |
-| `pushKey`                  | `string`  | 推送密钥                           | `"your_push_key"`              | 不必须    |
+| 字段名                        | 数据类型      | 描述                                                           | 示例                             | 是否必须填写 |
+|----------------------------|-----------|--------------------------------------------------------------|--------------------------------|--------|
+| `phone`                    | `string`  | 手机号                                                          | `"1234567890"`                 | 必须     |
+| `password`                 | `string`  | 工学云密码                                                        | `"your_password"`              | 必须     |
+| `address`                  | `string`  | 打卡地点，用于工学云显示（格式参照example.json）                               | `"四川省 · 成都市 · 高新区 · 在科创十一街附近"` | 必须     |
+| `latitude`                 | `string`  | 打卡的纬度，精确到小数点后六位                                              | `"34.051122"`                  | 必须     |
+| `longitude`                | `string`  | 打卡的经度，精确到小数点后六位                                              | `"-118.241137"`                | 必须     |
+| `province`                 | `string`  | 打卡的省份                                                        | `"四川省"`                        | 必须     |
+| `city`                     | `string`  | 打卡的城市                                                        | `"成都市"`                        | 必须     |
+| `area`                     | `string`  | 打卡的县/区                                                       | `"高新区"`                        | 必须     |
+| `device`                   | `string`  | 设备信息（[用这个小工具获取](https://www.123pan.com/s/rlqcVv-bQOPH.html)） | `"设备信息"`                       | 必须     |
+| `is_submit_daily`          | `boolean` | 是否提交日报                                                       | `false`                        | 必须     |
+| `is_submit_weekly`         | `boolean` | 是否提交周报                                                       | `false`                        | 必须     |
+| `is_submit_month_report`   | `boolean` | 是否提交月报                                                       | `false`                        | 必须     |
+| `submit_weekly_time`       | `string`  | 周报提交时间                                                       | `"1"`                          | 不必须    |
+| `submit_month_report_time` | `string`  | 月报提交时间                                                       | `"2"`                          | 不必须    |
+| `pushType`                 | `string`  | 推送方式                                                         | `"server"` 或 `"pushplus"`      | 不必须    |
+| `pushKey`                  | `string`  | 推送密钥                                                         | `"your_push_key"`              | 不必须    |
 
 #### 示例 JSON 配置
 
