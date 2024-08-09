@@ -72,7 +72,12 @@ class ApiClient:
             "pageSize": 999999,
             "t": aes_encrypt(str(int(time.time() * 1000)))
         }
-        headers = self._get_authenticated_headers()
+        headers = self._get_authenticated_headers(
+            sign_data=[
+                self.config_manager.get_user_info('userId'),
+                self.config_manager.get_user_info('roleKey')
+            ]
+        )
         rsp = self._post_request(url, headers, data, '获取planID失败')
         plan_info = rsp.get('data', [{}])[0]
         self.config_manager.update_config('planInfo', plan_info)
