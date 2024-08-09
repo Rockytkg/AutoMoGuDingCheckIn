@@ -2,8 +2,8 @@ import logging
 import os
 
 from util.Api import ApiClient
-from util.ConfigManager import ConfigManager
-from util.MessagePusher import push_message
+from util.Config import ConfigManager
+from util.MessagePush import MessagePusher
 
 # 配置日志
 logging.basicConfig(
@@ -68,7 +68,8 @@ def run(config_manager: ConfigManager) -> None:
     push_type = config_manager.get_config('pushType')
 
     if push_key and push_type:
-        push_message(push_type, '工学云消息', message, push_key)
+        pusher = MessagePusher(push_key, push_type)
+        pusher.push('工学云消息', message)
     else:
         logger.info("用户未配置推送")
 
