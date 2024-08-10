@@ -178,6 +178,83 @@ class ApiClient:
         rsp = self._post_request(url, headers, data, '获取周报列表失败')
         return rsp.get('flag')
 
+    def submit_report(self, report_info):
+        """
+        提交报告。
+
+        :param report_info: 报告信息。
+        :type report_info: dict
+        :return: 无
+        :rtype: None
+        :raises ValueError: 如果提交报告失败，抛出包含详细错误信息的异常。
+        """
+        url = '/practice/paper/v5/save'
+        headers = self._get_authenticated_headers(
+            sign_data=[
+                self.config_manager.get_user_info('userId'),
+                report_info.get('type'),
+                self.config_manager.get_plan_info('planId'),
+                report_info.get('title'),
+            ]
+        )
+        data = {
+            "address": None,
+            "applyId": None,
+            "applyName": None,
+            "attachmentList": None,
+            "commentNum": None,
+            "commentContent": None,
+            "content": report_info.get('content'),
+            "createBy": None,
+            "createTime": None,
+            "depName": None,
+            "reject": None,
+            "endTime": report_info.get('endTime'),
+            "headImg": None,
+            "yearmonth": report_info.get('yearmonth'),
+            "imageList": None,
+            "isFine": None,
+            "latitude": None,
+            "gpmsSchoolYear": None,
+            "longitude": None,
+            "planId": self.config_manager.get_plan_info('planId'),
+            "planName": None,
+            "reportId": None,
+            "reportType": report_info.get('type'),
+            "reportTime": report_info.get('reportTime'),
+            "isOnTime": None,
+            "schoolId": None,
+            "startTime": report_info.get('startTime'),
+            "state": None,
+            "studentId": None,
+            "studentNumber": None,
+            "supportNum": None,
+            "title": report_info.get('title'),
+            "url": None,
+            "username": None,
+            "weeks": report_info.get('weeks'),
+            "videoUrl": None,
+            "videoTitle": None,
+            "attachments": report_info.get('attachments', ''),
+            "companyName": None,
+            "jobName": None,
+            "jobId": self._get_job_id(),
+            "score": None,
+            "tpJobId": None,
+            "starNum": None,
+            "confirmDays": None,
+            "isApply": None,
+            "compStarNum": None,
+            "compScore": None,
+            "compComment": None,
+            "compState": None,
+            "apply": None,
+            "levelEntity": None,
+            "t": aes_encrypt(str(int(time.time() * 1000)))
+        }
+
+        self._post_request(url, headers, data, report_info.get('msg'))
+
     def get_weeks_date(self):
         """
         获取本周周报周期信息
