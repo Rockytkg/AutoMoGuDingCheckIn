@@ -279,8 +279,7 @@ class ApiClient:
         :return: 包含用户打卡信息的字典。
         :rtype: dict
 
-        :raises
-        ValueError: 如果获取打卡信息失败，抛出包含详细错误信息的异常。
+        :raises ValueError: 如果获取打卡信息失败，抛出包含详细错误信息的异常。
         """
         url = '/attendence/clock/v2/listSynchro'
         headers = self._get_authenticated_headers()
@@ -297,12 +296,10 @@ class ApiClient:
 
         该方法会根据传入的打卡信息生成打卡请求，并发送至服务器完成打卡操作。
 
-        :param
-        checkin_info: 包含打卡类型及相关信息的字典。
+        :param checkin_info: 包含打卡类型及相关信息的字典。
         :type checkin_info: dict
 
-        :raises
-        ValueError: 如果打卡提交失败，抛出包含详细错误信息的异常。
+        :raises ValueError: 如果打卡提交失败，抛出包含详细错误信息的异常。
         """
         url = 'attendence/clock/v4/save'
         api_module_log.info(f'打卡类型：{checkin_info.get("type")}')
@@ -376,8 +373,7 @@ class ApiClient:
         该方法会从配置管理器中获取用户的Token、用户ID及角色Key，并生成包含这些信息的请求头。
         如果提供了sign_data，还会生成并添加签名信息。
 
-        :param
-        sign_data: 用于生成签名的数据列表，默认为None。
+        :param sign_data: 用于生成签名的数据列表，默认为None。
         :type sign_data: list, optional
 
         :return: 包含认证信息和签名的请求头字典。
