@@ -130,6 +130,146 @@ class ApiClient:
         plan_info = rsp.get('data', [{}])[0]
         self.config_manager.update_config('planInfo', plan_info)
 
+    def _get_job_id(self):
+        """
+        获取用户的工作id。
+
+        该方法会发送请求获取当前用户的岗位id。
+
+        :return: 用户的工作id。
+        :rtype: str
+
+        :raises ValueError: 如果获取岗位信息失败，抛出包含详细错误信息的异常。
+        """
+        url = '/practice/job/v4/infoByStu'
+        data = {
+            "planId": self.config_manager.get_plan_info('planId'),
+            "t": aes_encrypt(str(int(time.time() * 1000)))
+        }
+        headers = self._get_authenticated_headers()
+        rsp = self._post_request(url, headers, data, '获取岗位信息失败')
+        return rsp.get('data', {}).get('jobId', '')
+
+    def _get_submitted_reports_count(self, report_type):
+        """
+        获取已经提交的日报、周报或月报的数量。
+
+        :param report_type: 报告类型，可选值为 "day"（日报）、"week"（周报）或 "month"（月报）。
+        :type report_type: str
+        :return: 已经提交的报告数量。
+        :rtype: int
+        :raises ValueError: 如果获取数量失败，抛出包含详细错误信息的异常。
+        """
+        url = '/practice/paper/v2/listByStu'
+        data = {
+            "currPage": 1,
+            "pageSize": 10,
+            "reportType": report_type,
+            "planId": self.config_manager.get_plan_info('planId'),
+            "t": aes_encrypt(str(int(time.time() * 1000)))
+        }
+        headers = self._get_authenticated_headers(
+            sign_data=[
+                self.config_manager.get_user_info('userId'),
+                self.config_manager.get_user_info('roleKey'),
+                report_type
+            ]
+        )
+        rsp = self._post_request(url, headers, data, '获取周报列表失败')
+        return rsp.get('flag')
+
+    def submit_report(self, report_info):
+        """
+        提交报告。
+
+        :param report_info: 报告信息。
+        :type report_info: dict
+        :return: 无
+        :rtype: None
+        :raises ValueError: 如果提交报告失败，抛出包含详细错误信息的异常。
+        """
+        url = '/practice/paper/v5/save'
+        headers = self._get_authenticated_headers(
+            sign_data=[
+                self.config_manager.get_user_info('userId'),
+                report_info.get('type'),
+                self.config_manager.get_plan_info('planId'),
+                report_info.get('title'),
+            ]
+        )
+        data = {
+            "address": None,
+            "applyId": None,
+            "applyName": None,
+            "attachmentList": None,
+            "commentNum": None,
+            "commentContent": None,
+            "content": report_info.get('content'),
+            "createBy": None,
+            "createTime": None,
+            "depName": None,
+            "reject": None,
+            "endTime": report_info.get('endTime'),
+            "headImg": None,
+            "yearmonth": report_info.get('yearmonth'),
+            "imageList": None,
+            "isFine": None,
+            "latitude": None,
+            "gpmsSchoolYear": None,
+            "longitude": None,
+            "planId": self.config_manager.get_plan_info('planId'),
+            "planName": None,
+            "reportId": None,
+            "reportType": report_info.get('type'),
+            "reportTime": report_info.get('reportTime'),
+            "isOnTime": None,
+            "schoolId": None,
+            "startTime": report_info.get('startTime'),
+            "state": None,
+            "studentId": None,
+            "studentNumber": None,
+            "supportNum": None,
+            "title": report_info.get('title'),
+            "url": None,
+            "username": None,
+            "weeks": report_info.get('weeks'),
+            "videoUrl": None,
+            "videoTitle": None,
+            "attachments": report_info.get('attachments', ''),
+            "companyName": None,
+            "jobName": None,
+            "jobId": self._get_job_id(),
+            "score": None,
+            "tpJobId": None,
+            "starNum": None,
+            "confirmDays": None,
+            "isApply": None,
+            "compStarNum": None,
+            "compScore": None,
+            "compComment": None,
+            "compState": None,
+            "apply": None,
+            "levelEntity": None,
+            "t": aes_encrypt(str(int(time.time() * 1000)))
+        }
+
+        self._post_request(url, headers, data, report_info.get('msg'))
+
+    def get_weeks_date(self):
+        """
+        获取本周周报周期信息
+
+        :return: 包含周报周报周期信息的字典。
+        :rtype: list
+        """
+        url = '/practice/paper/v3/getWeeks1'
+        data = {
+            "t": aes_encrypt(str(int(time.time() * 1000)))
+        }
+        headers = self._get_authenticated_headers()
+        rsp = self._post_request(url, headers, data, '获取周报周期失败')
+        return rsp.get('data', [])[0]
+
     def get_checkin_info(self):
         """
         获取用户的打卡信息。
@@ -248,4 +388,3 @@ class ApiClient:
         if sign_data:
             headers['sign'] = create_sign(*sign_data)
         return headers
-    # TODO [日报、周报、月报相关Api]
