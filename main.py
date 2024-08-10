@@ -61,8 +61,8 @@ def run(config: ConfigManager) -> None:
         message = (f"姓名：{user_name}\n\n 打卡类型：{checkin_info['type']}\n\n"
                    f"打卡时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n\n"
                    f"打卡地点：{config.get_config('address')}\n\n"
-                   f"上次打卡时间：{checkin_info.get('address')}\n\n"
-                   f"上次打卡地点：{checkin_info.get('createTime')}\n\n"
+                   f"上次打卡时间：{checkin_info.get('createTime')}\n\n"
+                   f"上次打卡地点：{checkin_info.get('address')}\n\n"
                    "日报：未开启此功能\n\n周报：未到周报提交时间\n\n月报：未到月报提交时间"
                    )
         logger.info(title)
