@@ -130,14 +130,14 @@ class ApiClient:
         plan_info = rsp.get('data', [{}])[0]
         self.config_manager.update_config('planInfo', plan_info)
 
-    def get_job_info(self):
+    def get_job_id(self):
         """
-        获取用户的岗位信息。
+        获取用户的工作id。
 
-        该方法会发送请求获取当前用户的岗位信息。
+        该方法会发送请求获取当前用户的岗位id。
 
-        :return: 包含用户岗位信息的字典。
-        :rtype: dict
+        :return: 用户的工作id。
+        :rtype: str
 
         :raises ValueError: 如果获取岗位信息失败，抛出包含详细错误信息的异常。
         """
@@ -148,7 +148,7 @@ class ApiClient:
         }
         headers = self._get_authenticated_headers()
         rsp = self._post_request(url, headers, data, '获取岗位信息失败')
-        return rsp.get('data', {})
+        return rsp.get('data', {}).get('jobId', '')
 
     def get_checkin_info(self):
         """
