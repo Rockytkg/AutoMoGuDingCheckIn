@@ -55,7 +55,14 @@ def run(config: ConfigManager) -> None:
 
         # 提交打卡信息
         api_client.submit_clock_in(checkin_info)
-        message = create_message(config, checkin_info, user_name)
+        message = (
+            f"姓名：{user_name}\n\n"
+            f"打卡类型：{checkin_info['type']}\n\n"
+            f"打卡时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n\n"
+            f"打卡地点：{config.get_config('address')}\n\n"
+            f"上次打卡时间：{checkin_info.get('address')}\n\n"
+            f"上次打卡地点：{checkin_info.get('lastAddress')}\n\n"
+        )
         logger.info("工学云签到成功")
 
         # 提交日报、周报、月报
@@ -75,18 +82,6 @@ def toggle_checkin_type(checkin_info: dict) -> dict:
     """切换打卡类型"""
     checkin_info['type'] = 'END' if checkin_info.get('type') == 'START' else 'START'
     return checkin_info
-
-
-def create_message(config: ConfigManager, checkin_info: dict, user_name: str) -> str:
-    """生成推送消息"""
-    return (
-        f"姓名：{user_name}\n\n"
-        f"打卡类型：{checkin_info['type']}\n\n"
-        f"打卡时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n\n"
-        f"打卡地点：{config.get_config('address')}\n\n"
-        f"上次打卡时间：{checkin_info.get('address')}\n\n"
-        f"上次打卡地点：{checkin_info.get('lastAddress')}\n\n"
-    )
 
 
 def handle_reports(config: ConfigManager, api_client: ApiClient, message: str) -> None:
