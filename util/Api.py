@@ -150,7 +150,7 @@ class ApiClient:
         rsp = self._post_request(url, headers, data, '获取岗位信息失败')
         return rsp.get('data', {}).get('jobId', '')
 
-    def _get_submitted_reports_count(self, report_type):
+    def get_submitted_reports_count(self, report_type):
         """
         获取已经提交的日报、周报或月报的数量。
 
@@ -260,7 +260,7 @@ class ApiClient:
         获取本周周报周期信息
 
         :return: 包含周报周报周期信息的字典。
-        :rtype: list
+        :rtype: dict
         """
         url = '/practice/paper/v3/getWeeks1'
         data = {
