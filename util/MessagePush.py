@@ -5,7 +5,7 @@ logging.basicConfig(format='[%(asctime)s] %(name)s %(levelname)s: %(message)s',
                     level=logging.INFO,
                     datefmt='%Y-%m-%d %I:%M:%S'
                     )
-MessagePusherLog = logging.getLogger('MessagePusherLOg')
+MessagePusherLog = logging.getLogger('MessagePush')
 
 
 class MessagePusher:

@@ -49,39 +49,119 @@ def run(config: ConfigManager) -> None:
     """
     try:
         api_client = get_api_client(config)
-        checkin_info = api_client.get_checkin_info()
-
-        # 切换打卡类型
-        checkin_info['type'] = 'END' if checkin_info.get('type') == 'START' else 'START'
-
+        checkin_info = toggle_checkin_type(api_client.get_checkin_info())
         user_name = config.get_user_info('nikeName')
         logger.info(f'用户 {user_name} 开始签到')
-        api_client.submit_clock_in(checkin_info)
-        title = f"工学云打卡成功"
-        message = (f"姓名：{user_name}\n\n 打卡类型：{checkin_info['type']}\n\n"
-                   f"打卡时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n\n"
-                   f"打卡地点：{config.get_config('address')}\n\n"
-                   f"上次打卡时间：{checkin_info.get('createTime')}\n\n"
-                   f"上次打卡地点：{checkin_info.get('address')}\n\n"
-                   "日报：未开启此功能\n\n周报：未到周报提交时间\n\n月报：未到月报提交时间"
-                   )
-        logger.info(title)
+
+        print(api_client.get_job_info())
+
+        # 提交打卡信息
+        #api_client.submit_clock_in(checkin_info)
+        message = (
+            f"姓名：{user_name}\n\n"
+            f"打卡类型：{checkin_info['type']}\n\n"
+            f"打卡时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n\n"
+            f"打卡地点：{config.get_config('address')}\n\n"
+            f"上次打卡时间：{checkin_info.get('createTime')}\n\n"
+            f"上次打卡地点：{checkin_info.get('address')}\n\n"
+        )
+        logger.info("工学云签到成功")
+
+        # 提交日报、周报、月报
+        if config.get_config("is_submit_daily"):
+            message += submit_daily_report(api_client)
+        else:
+            logger.info("用户未开启日报提交")
+            message += "日报：用户未开启此功能\n\n"
+
+        if config.get_config("is_submit_weekly"):
+            message += submit_weekly_report(config, api_client)
+        else:
+            logger.info("用户未开启周报提交")
+            message += "周报：用户未开启此功能\n\n"
+
+        if config.get_config("is_submit_monthly"):
+            message += submit_monthly_report(config, api_client)
+        else:
+            logger.info("用户未开启月报提交")
+            message += "月报：用户未开启此功能\n\n"
 
     except Exception as e:
         logger.error(f"运行时出现异常: {e}")
-        title = f"工学云打卡失败"
         message = f"运行时出现异常：{str(e)}"
+        push_notification(config, "工学云打卡失败", message)
+    else:
+        push_notification(config, "工学云打卡成功", message)
 
+    logger.info("--------------------------")
+
+
+def toggle_checkin_type(checkin_info: dict) -> dict:
+    """切换打卡类型"""
+    checkin_info['type'] = 'END' if checkin_info.get('type') == 'START' else 'START'
+    return checkin_info
+
+
+def submit_daily_report(api_client: ApiClient) -> str:
+    """提交日报"""
+    report_info = {
+        'title': f'第{api_client.get_submitted_reports_count("day") + 1}天日报',
+        'content': '',
+        'attachments': '',
+        'reportType': 'day',
+        'reportTime': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    }
+    api_client.submit_report(report_info)
+    return f"日报：第{api_client.get_submitted_reports_count('day') + 1}天日报已提交\n\n"
+
+
+def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> str:
+    """提交周报"""
+    if config.get_config("submit_weekly_time") == ('7' if time.strftime('%w') == '0' else time.strftime('%w')):
+        weeks = api_client.get_weeks_date()
+        report_info = {
+            'title': f"第{api_client.get_submitted_reports_count('week') + 1}周周报",
+            'content': '',
+            'attachments': '',
+            'reportType': 'week',
+            'endTime': weeks.get('endTime'),
+            'startTime': weeks.get('startTime'),
+            'weeks': f"第{api_client.get_submitted_reports_count('week') + 1}周"
+        }
+        api_client.submit_report(report_info)
+        return f"周报：第{api_client.get_submitted_reports_count('week') + 1}周周报已提交\n\n"
+    else:
+        logger.info("未到周报提交时间")
+        return "周报：未到周报提交时间\n\n"
+
+
+def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> str:
+    """提交月报"""
+    if config.get_config("submit_monthly_time") == time.strftime('%d'):
+        report_info = {
+            'title': f"第{api_client.get_submitted_reports_count('week') + 1}月月报",
+            'content': '',
+            'attachments': '',
+            'yearmonth': time.strftime('%Y-%m', time.localtime()),
+            'reportType': 'month',
+        }
+        api_client.submit_report(report_info)
+        return f"月报：第{api_client.get_submitted_reports_count('week') + 1}月月报已提交\n\n"
+    else:
+        logger.info("未到月报提交时间")
+        return "月报：未到月报提交时间\n\n"
+
+
+def push_notification(config: ConfigManager, title: str, message: str) -> None:
+    """发送推送消息"""
     push_key = config.get_config('pushKey')
     push_type = config.get_config('pushType')
 
     if push_key and push_type:
         pusher = MessagePusher(push_key, push_type)
-        pusher.push(title, message)
+        #pusher.push(title, message)
     else:
         logger.info("用户未配置推送")
-
-    logger.info("--------------------------")
 
 
 def main() -> None:
