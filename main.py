@@ -53,33 +53,35 @@ def run(config: ConfigManager) -> None:
         user_name = config.get_user_info('nikeName')
         logger.info(f'用户 {user_name} 开始签到')
 
+        print(api_client.get_job_info())
+
         # 提交打卡信息
-        api_client.submit_clock_in(checkin_info)
+        #api_client.submit_clock_in(checkin_info)
         message = (
             f"姓名：{user_name}\n\n"
             f"打卡类型：{checkin_info['type']}\n\n"
             f"打卡时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n\n"
             f"打卡地点：{config.get_config('address')}\n\n"
-            f"上次打卡时间：{checkin_info.get('address')}\n\n"
+            f"上次打卡时间：{checkin_info.get('createTime')}\n\n"
             f"上次打卡地点：{checkin_info.get('address')}\n\n"
         )
         logger.info("工学云签到成功")
 
         # 提交日报、周报、月报
         if config.get_config("is_submit_daily"):
-            submit_daily_report(api_client)
+            message += submit_daily_report(api_client)
         else:
             logger.info("用户未开启日报提交")
             message += "日报：用户未开启此功能\n\n"
 
         if config.get_config("is_submit_weekly"):
-            submit_weekly_report(config, api_client, message)
+            message += submit_weekly_report(config, api_client)
         else:
             logger.info("用户未开启周报提交")
             message += "周报：用户未开启此功能\n\n"
 
         if config.get_config("is_submit_monthly"):
-            submit_monthly_report(config, api_client, message)
+            message += submit_monthly_report(config, api_client)
         else:
             logger.info("用户未开启月报提交")
             message += "月报：用户未开启此功能\n\n"
@@ -100,7 +102,7 @@ def toggle_checkin_type(checkin_info: dict) -> dict:
     return checkin_info
 
 
-def submit_daily_report(api_client: ApiClient) -> None:
+def submit_daily_report(api_client: ApiClient) -> str:
     """提交日报"""
     report_info = {
         'title': f'第{api_client.get_submitted_reports_count("day") + 1}天日报',
@@ -110,9 +112,10 @@ def submit_daily_report(api_client: ApiClient) -> None:
         'reportTime': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
     }
     api_client.submit_report(report_info)
+    return f"日报：第{api_client.get_submitted_reports_count('day') + 1}天日报已提交\n\n"
 
 
-def submit_weekly_report(config: ConfigManager, api_client: ApiClient, message: str) -> None:
+def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> str:
     """提交周报"""
     if config.get_config("submit_weekly_time") == ('7' if time.strftime('%w') == '0' else time.strftime('%w')):
         weeks = api_client.get_weeks_date()
@@ -126,12 +129,13 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient, message: 
             'weeks': f"第{api_client.get_submitted_reports_count('week') + 1}周"
         }
         api_client.submit_report(report_info)
+        return f"周报：第{api_client.get_submitted_reports_count('week') + 1}周周报已提交\n\n"
     else:
         logger.info("未到周报提交时间")
-        message += "周报：未到周报提交时间\n\n"
+        return "周报：未到周报提交时间\n\n"
 
 
-def submit_monthly_report(config: ConfigManager, api_client: ApiClient, message: str) -> None:
+def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> str:
     """提交月报"""
     if config.get_config("submit_monthly_time") == time.strftime('%d'):
         report_info = {
@@ -142,9 +146,10 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient, message:
             'reportType': 'month',
         }
         api_client.submit_report(report_info)
+        return f"月报：第{api_client.get_submitted_reports_count('week') + 1}月月报已提交\n\n"
     else:
         logger.info("未到月报提交时间")
-        message += "月报：未到月报提交时间\n\n"
+        return "月报：未到月报提交时间\n\n"
 
 
 def push_notification(config: ConfigManager, title: str, message: str) -> None:
@@ -154,7 +159,7 @@ def push_notification(config: ConfigManager, title: str, message: str) -> None:
 
     if push_key and push_type:
         pusher = MessagePusher(push_key, push_type)
-        pusher.push(title, message)
+        #pusher.push(title, message)
     else:
         logger.info("用户未配置推送")
 

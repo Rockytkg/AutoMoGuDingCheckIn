@@ -130,14 +130,14 @@ class ApiClient:
         plan_info = rsp.get('data', [{}])[0]
         self.config_manager.update_config('planInfo', plan_info)
 
-    def _get_job_id(self):
+    def get_job_info(self):
         """
         获取用户的工作id。
 
         该方法会发送请求获取当前用户的岗位id。
 
         :return: 用户的工作id。
-        :rtype: str
+        :rtype: dict
 
         :raises ValueError: 如果获取岗位信息失败，抛出包含详细错误信息的异常。
         """
@@ -148,7 +148,7 @@ class ApiClient:
         }
         headers = self._get_authenticated_headers()
         rsp = self._post_request(url, headers, data, '获取岗位信息失败')
-        return rsp.get('data', {}).get('jobId', '')
+        return rsp.get('data', {})
 
     def get_submitted_reports_count(self, report_type):
         """
@@ -238,7 +238,7 @@ class ApiClient:
             "attachments": report_info.get('attachments', ''),
             "companyName": None,
             "jobName": None,
-            "jobId": self._get_job_id(),
+            "jobId": report_info.get('jobId', ''),
             "score": None,
             "tpJobId": None,
             "starNum": None,
