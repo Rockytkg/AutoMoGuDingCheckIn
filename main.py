@@ -61,12 +61,28 @@ def run(config: ConfigManager) -> None:
             f"打卡时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n\n"
             f"打卡地点：{config.get_config('address')}\n\n"
             f"上次打卡时间：{checkin_info.get('address')}\n\n"
-            f"上次打卡地点：{checkin_info.get('lastAddress')}\n\n"
+            f"上次打卡地点：{checkin_info.get('address')}\n\n"
         )
         logger.info("工学云签到成功")
 
         # 提交日报、周报、月报
-        handle_reports(config, api_client, message)
+        if config.get_config("is_submit_daily"):
+            submit_daily_report(api_client)
+        else:
+            logger.info("用户未开启日报提交")
+            message += "日报：用户未开启此功能\n\n"
+
+        if config.get_config("is_submit_weekly"):
+            submit_weekly_report(config, api_client, message)
+        else:
+            logger.info("用户未开启周报提交")
+            message += "周报：用户未开启此功能\n\n"
+
+        if config.get_config("is_submit_monthly"):
+            submit_monthly_report(config, api_client, message)
+        else:
+            logger.info("用户未开启月报提交")
+            message += "月报：用户未开启此功能\n\n"
 
     except Exception as e:
         logger.error(f"运行时出现异常: {e}")
@@ -82,27 +98,6 @@ def toggle_checkin_type(checkin_info: dict) -> dict:
     """切换打卡类型"""
     checkin_info['type'] = 'END' if checkin_info.get('type') == 'START' else 'START'
     return checkin_info
-
-
-def handle_reports(config: ConfigManager, api_client: ApiClient, message: str) -> None:
-    """处理日报、周报和月报的提交"""
-    if config.get_config("is_submit_daily"):
-        submit_daily_report(api_client)
-    else:
-        logger.info("用户未开启日报提交")
-        message += "日报：用户未开启此功能\n\n"
-
-    if config.get_config("is_submit_weekly"):
-        submit_weekly_report(config, api_client, message)
-    else:
-        logger.info("用户未开启周报提交")
-        message += "周报：用户未开启此功能\n\n"
-
-    if config.get_config("is_submit_monthly"):
-        submit_monthly_report(config, api_client, message)
-    else:
-        logger.info("用户未开启月报提交")
-        message += "月报：用户未开启此功能\n\n"
 
 
 def submit_daily_report(api_client: ApiClient) -> None:
