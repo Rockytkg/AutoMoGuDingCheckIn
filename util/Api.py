@@ -192,7 +192,7 @@ class ApiClient:
         headers = self._get_authenticated_headers(
             sign_data=[
                 self.config_manager.get_user_info('userId'),
-                report_info.get('type'),
+                report_info.get('reportType'),
                 self.config_manager.get_plan_info('planId'),
                 report_info.get('title'),
             ]
@@ -209,9 +209,9 @@ class ApiClient:
             "createTime": None,
             "depName": None,
             "reject": None,
-            "endTime": report_info.get('endTime'),
+            "endTime": report_info.get('endTime', None),
             "headImg": None,
-            "yearmonth": report_info.get('yearmonth'),
+            "yearmonth": report_info.get('yearmonth', None),
             "imageList": None,
             "isFine": None,
             "latitude": None,
@@ -220,11 +220,11 @@ class ApiClient:
             "planId": self.config_manager.get_plan_info('planId'),
             "planName": None,
             "reportId": None,
-            "reportType": report_info.get('type'),
-            "reportTime": report_info.get('reportTime'),
+            "reportType": report_info.get('reportType'),
+            "reportTime": report_info.get('reportTime', None),
             "isOnTime": None,
             "schoolId": None,
-            "startTime": report_info.get('startTime'),
+            "startTime": report_info.get('startTime', None),
             "state": None,
             "studentId": None,
             "studentNumber": None,
@@ -232,7 +232,7 @@ class ApiClient:
             "title": report_info.get('title'),
             "url": None,
             "username": None,
-            "weeks": report_info.get('weeks'),
+            "weeks": report_info.get('weeks', None),
             "videoUrl": None,
             "videoTitle": None,
             "attachments": report_info.get('attachments', ''),
@@ -252,7 +252,6 @@ class ApiClient:
             "levelEntity": None,
             "t": aes_encrypt(str(int(time.time() * 1000)))
         }
-
         self._post_request(url, headers, data, report_info.get('msg'))
 
     def get_weeks_date(self):
@@ -388,3 +387,33 @@ class ApiClient:
         if sign_data:
             headers['sign'] = create_sign(*sign_data)
         return headers
+
+
+def generate_article(tittle, job_info):
+    # 设置请求头，包含认证信息
+    headers = {
+        'Authorization': f'Bearer sk-m8ztJpDutdnLVEba2rcAgfS9XADm1iFfFW9YrkpPz1RTXEIc',
+    }
+
+    # 设置请求体
+    data = {
+        "model": "gpt-4o-2024-08-06",
+        "messages": [
+            {"role": "system",
+             "content": "According to the information provided by the user, write an article according to the template, the reply does not allow the use of Markdown syntax, the content is in line with the job description, the content of the article is fluent, in line with the Chinese grammatical conventions"},
+            {"role": "system",
+             "content": "模板：实习地点：xxxx\n\n工作内容：\n\nxzzzx\n\n工作总结：\n\nxxxxxx\n\n遇到问题：\n\nxzzzx\n\n自我评价：\n\nxxxxxx"},
+            {"role": "user",
+             "content": f"{tittle},工作地点:{job_info['jobAddress']};公司名:{job_info['practiceCompanyEntity']['companyName']};"
+                        f"岗位职责:{job_info['quartersIntroduce']};公司所属行业:{job_info['practiceCompanyEntity']['tradeValue']}"}
+        ]
+    }
+
+    # 发送POST请求
+    response = requests.post('https://aigptx.top/v1/chat/completions', headers=headers, json=data)
+
+    # 检查响应状态码并返回结果
+    if response.status_code == 200:
+        return response.json()['choices'][0]['message']['content']
+    else:
+        return None

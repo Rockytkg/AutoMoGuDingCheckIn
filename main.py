@@ -2,7 +2,7 @@ import logging
 import os
 import time
 
-from util.Api import ApiClient
+from util.Api import ApiClient, generate_article
 from util.Config import ConfigManager
 from util.MessagePush import MessagePusher
 
@@ -53,10 +53,8 @@ def run(config: ConfigManager) -> None:
         user_name = config.get_user_info('nikeName')
         logger.info(f'用户 {user_name} 开始签到')
 
-        print(api_client.get_job_info())
-
         # 提交打卡信息
-        #api_client.submit_clock_in(checkin_info)
+        api_client.submit_clock_in(checkin_info)
         message = (
             f"姓名：{user_name}\n\n"
             f"打卡类型：{checkin_info['type']}\n\n"
@@ -80,7 +78,7 @@ def run(config: ConfigManager) -> None:
             logger.info("用户未开启周报提交")
             message += "周报：用户未开启此功能\n\n"
 
-        if config.get_config("is_submit_monthly"):
+        if config.get_config("is_submit_month_report"):
             message += submit_monthly_report(config, api_client)
         else:
             logger.info("用户未开启月报提交")
@@ -104,11 +102,13 @@ def toggle_checkin_type(checkin_info: dict) -> dict:
 
 def submit_daily_report(api_client: ApiClient) -> str:
     """提交日报"""
+    job_info = api_client.get_job_info()
     report_info = {
         'title': f'第{api_client.get_submitted_reports_count("day") + 1}天日报',
         'content': '',
         'attachments': '',
         'reportType': 'day',
+        'jobId': job_info.get('jobId'),
         'reportTime': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
     }
     api_client.submit_report(report_info)
@@ -119,17 +119,26 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> str:
     """提交周报"""
     if config.get_config("submit_weekly_time") == ('7' if time.strftime('%w') == '0' else time.strftime('%w')):
         weeks = api_client.get_weeks_date()
+        job_info = api_client.get_job_info()
+        logger.info("获取周报内容：调用AI生成")
+        week = api_client.get_submitted_reports_count('week') + 1
+        content = generate_article(
+            f"第{week}周周报",
+            job_info
+        )
+        logger.info("周报内容获取成功，开始提交周报")
         report_info = {
-            'title': f"第{api_client.get_submitted_reports_count('week') + 1}周周报",
-            'content': '',
+            'title': f"第{week}周周报",
+            'content': content,
             'attachments': '',
             'reportType': 'week',
             'endTime': weeks.get('endTime'),
             'startTime': weeks.get('startTime'),
-            'weeks': f"第{api_client.get_submitted_reports_count('week') + 1}周"
+            'jobId': job_info.get('jobId'),
+            'weeks': f"第{week}周"
         }
         api_client.submit_report(report_info)
-        return f"周报：第{api_client.get_submitted_reports_count('week') + 1}周周报已提交\n\n"
+        return f"周报：第{week}周周报已提交\n\n"
     else:
         logger.info("未到周报提交时间")
         return "周报：未到周报提交时间\n\n"
@@ -138,12 +147,14 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> str:
 def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> str:
     """提交月报"""
     if config.get_config("submit_monthly_time") == time.strftime('%d'):
+        job_info = api_client.get_job_info()
         report_info = {
             'title': f"第{api_client.get_submitted_reports_count('week') + 1}月月报",
             'content': '',
             'attachments': '',
             'yearmonth': time.strftime('%Y-%m', time.localtime()),
             'reportType': 'month',
+            'jobId': job_info.get('jobId'),
         }
         api_client.submit_report(report_info)
         return f"月报：第{api_client.get_submitted_reports_count('week') + 1}月月报已提交\n\n"
@@ -159,7 +170,7 @@ def push_notification(config: ConfigManager, title: str, message: str) -> None:
 
     if push_key and push_type:
         pusher = MessagePusher(push_key, push_type)
-        #pusher.push(title, message)
+        pusher.push(title, message)
     else:
         logger.info("用户未配置推送")
 
