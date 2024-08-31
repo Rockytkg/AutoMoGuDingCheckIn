@@ -326,12 +326,40 @@ def push_notification(config: ConfigManager, results: List[Dict[str, Any]], mess
 
 def run(config: ConfigManager) -> None:
     """执行所有任务"""
-    api_client = get_api_client(config)
+    results: List[Dict[str, Any]] = []
+
+    try:
+        api_client = get_api_client(config)
+    except Exception as e:
+        error_message = f"获取API客户端失败: {str(e)}"
+        logger.error(error_message)
+        results.append({
+            "status": "fail",
+            "message": error_message,
+            "task_type": "API客户端初始化"
+        })
+        message = generate_markdown_message(results)
+        push_notification(config, results, message)
+        logger.info("任务异常结束\n")
+        return  # 终止执行当前用户的所有任务
 
     logger.info(f'开始执行：{config.get_user_info('nikeName')}')
-    results: List[Dict[str, Any]] = [perform_clock_in(api_client, config), submit_daily_report(api_client, config),
-                                     submit_weekly_report(config, api_client),
-                                     submit_monthly_report(config, api_client)]
+
+    try:
+        results = [
+            perform_clock_in(api_client, config),
+            submit_daily_report(api_client, config),
+            submit_weekly_report(config, api_client),
+            submit_monthly_report(config, api_client)
+        ]
+    except Exception as e:
+        error_message = f"执行任务时发生错误: {str(e)}"
+        logger.error(error_message)
+        results.append({
+            "status": "fail",
+            "message": error_message,
+            "task_type": "任务执行"
+        })
 
     message = generate_markdown_message(results)
     push_notification(config, results, message)
