@@ -1,6 +1,7 @@
 import logging
 import os
-import time
+from datetime import datetime, timedelta
+from typing import Dict, List, Any
 
 from util.Api import ApiClient, generate_article
 from util.Config import ConfigManager
@@ -10,7 +11,7 @@ from util.MessagePush import MessagePusher
 logging.basicConfig(
     format="[%(asctime)s] %(name)s %(levelname)s: %(message)s",
     level=logging.INFO,
-    datefmt="%Y-%m-%d %I:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger("MainModule")
 
@@ -18,16 +19,7 @@ USER_DIR = os.path.join(os.path.dirname(__file__), "user")
 
 
 def get_api_client(config: ConfigManager) -> ApiClient:
-    """获取配置好的ApiClient实例。
-
-    如果本地不存在用户Token或实习计划ID，执行登录或获取实习计划的操作。
-
-    :param config: 配置管理器实例。
-    :type config: ConfigManager
-
-    :return: 配置好的ApiClient实例。
-    :rtype: ApiClient
-    """
+    """获取配置好的ApiClient实例。"""
     api_client = ApiClient(config)
     if not config.get_user_info('token'):
         api_client.login()
@@ -38,95 +30,142 @@ def get_api_client(config: ConfigManager) -> ApiClient:
     return api_client
 
 
-def run(config: ConfigManager) -> None:
-    """执行打卡流程。
-
-    根据当前打卡类型（上班或下班）切换状态并提交打卡信息。
-    处理异常并根据配置发送推送消息。
-
-    :param config: 配置管理器实例。
-    :type config: ConfigManager
-    """
+def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, Any]:
+    """执行打卡操作"""
     try:
-        api_client = get_api_client(config)
-        checkin_info = toggle_checkin_type(api_client.get_checkin_info())
         user_name = config.get_user_info('nikeName')
-        logger.info(f'用户 {user_name} 开始签到')
+        current_time = datetime.now()
+        current_hour = current_time.hour
 
-        # 提交打卡信息
+        # 定义打卡时间范围
+        morning_start, morning_end = 8, 12
+        afternoon_start, afternoon_end = 17, 20
+
+        # 判断当前是否在打卡时间范围内
+        if morning_start <= current_hour < morning_end:
+            checkin_type = 'START'
+        elif afternoon_start <= current_hour < afternoon_end:
+            checkin_type = 'END'
+        else:
+            return {
+                "status": "skip",
+                "message": "当前不在打卡时间范围内",
+                "task_type": "打卡"
+            }
+
+        # 获取上次打卡信息
+        last_checkin_info = api_client.get_checkin_info()
+
+        # 检查是否已经打过卡
+        last_checkin_time = datetime.strptime(last_checkin_info['createTime'], "%Y-%m-%d %H:%M:%S")
+        if last_checkin_info['type'] == checkin_type and last_checkin_time.date() == current_time.date():
+            return {
+                "status": "skip",
+                "message": f"今日{'上班' if checkin_type == 'START' else '下班'}卡已打，无需重复打卡",
+                "task_type": "打卡"
+            }
+
+        logger.info(f'用户 {user_name} 开始{("上班" if checkin_type == "START" else "下班")}打卡')
+
+        # 更新打卡信息
+        checkin_info = last_checkin_info.copy()
+        checkin_info['type'] = checkin_type
+
         api_client.submit_clock_in(checkin_info)
-        message = (
-            f"姓名：{user_name}\n\n"
-            f"打卡类型：{checkin_info['type']}\n\n"
-            f"打卡时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n\n"
-            f"打卡地点：{config.get_config('address')}\n\n"
-            f"上次打卡时间：{checkin_info.get('createTime')}\n\n"
-            f"上次打卡地点：{checkin_info.get('address')}\n\n"
-        )
-        logger.info("工学云签到成功")
 
-        # 提交日报、周报、月报
-        if config.get_config("is_submit_daily"):
-            message += submit_daily_report(api_client)
-        else:
-            logger.info("用户未开启日报提交")
-            message += "日报：用户未开启此功能\n\n"
-
-        if config.get_config("is_submit_weekly"):
-            message += submit_weekly_report(config, api_client)
-        else:
-            logger.info("用户未开启周报提交")
-            message += "周报：用户未开启此功能\n\n"
-
-        if config.get_config("is_submit_month_report"):
-            message += submit_monthly_report(config, api_client)
-        else:
-            logger.info("用户未开启月报提交")
-            message += "月报：用户未开启此功能\n\n"
-
+        return {
+            "status": "success",
+            "message": f"{'上班' if checkin_type == 'START' else '下班'}打卡成功",
+            "task_type": "打卡",
+            "details": {
+                "姓名": user_name,
+                "打卡类型": '上班' if checkin_type == 'START' else '下班',
+                "打卡时间": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "打卡地点": config.get_config('address')
+            }
+        }
     except Exception as e:
-        logger.error(f"运行时出现异常: {e}")
-        message = f"运行时出现异常：{str(e)}"
-        push_notification(config, "工学云打卡失败", message)
-    else:
-        push_notification(config, "工学云打卡成功", message)
-
-    logger.info("--------------------------")
-
-
-def toggle_checkin_type(checkin_info: dict) -> dict:
-    """切换打卡类型"""
-    checkin_info['type'] = 'END' if checkin_info.get('type') == 'START' else 'START'
-    return checkin_info
+        logger.error(f"打卡失败: {e}")
+        return {
+            "status": "fail",
+            "message": f"打卡失败: {str(e)}",
+            "task_type": "打卡"
+        }
 
 
-def submit_daily_report(api_client: ApiClient) -> str:
+def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[str, Any]:
     """提交日报"""
-    job_info = api_client.get_job_info()
-    report_info = {
-        'title': f'第{api_client.get_submitted_reports_count("day") + 1}天日报',
-        'content': '',
-        'attachments': '',
-        'reportType': 'day',
-        'jobId': job_info.get('jobId'),
-        'reportTime': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-    }
-    api_client.submit_report(report_info)
-    return f"日报：第{api_client.get_submitted_reports_count('day') + 1}天日报已提交\n\n"
+    if not config.get_config("isSubmittedDaily"):
+        return {
+            "status": "skip",
+            "message": "用户未开启日报提交功能",
+            "task_type": "日报提交"
+        }
+
+    current_time = datetime.now()
+    if current_time.hour < 12:
+        return {
+            "status": "skip",
+            "message": "未到日报提交时间（需12点后）",
+            "task_type": "日报提交"
+        }
+
+    try:
+        job_info = api_client.get_job_info()
+        report_count = api_client.get_submitted_reports_count("day") + 1
+        content = generate_article(config, f"第{report_count}天日报", job_info)
+        report_info = {
+            'title': f'第{report_count}天日报',
+            'content': content,
+            'attachments': '',
+            'reportType': 'day',
+            'jobId': job_info.get('jobId'),
+            'reportTime': current_time.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        api_client.submit_report(report_info)
+        return {
+            "status": "success",
+            "message": f"第{report_count}天日报已提交",
+            "task_type": "日报提交",
+            "details": {
+                "日报标题": f'第{report_count}天日报',
+                "提交时间": current_time.strftime('%Y-%m-%d %H:%M:%S')
+            },
+            "report_content": content
+        }
+    except Exception as e:
+        logger.error(f"日报提交失败: {e}")
+        return {
+            "status": "fail",
+            "message": f"日报提交失败: {str(e)}",
+            "task_type": "日报提交"
+        }
 
 
-def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> str:
+def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[str, Any]:
     """提交周报"""
-    if config.get_config("submit_weekly_time") == ('7' if time.strftime('%w') == '0' else time.strftime('%w')):
+    if not config.get_config("isSubmittedWeekly"):
+        return {
+            "status": "skip",
+            "message": "用户未开启周报提交功能",
+            "task_type": "周报提交"
+        }
+
+    current_time = datetime.now()
+    submit_day = int(config.get_config("submitWeeklyTime"))
+
+    if current_time.weekday() + 1 != submit_day or current_time.hour < 12:
+        return {
+            "status": "skip",
+            "message": "未到周报提交时间（需指定日期12点后）",
+            "task_type": "周报提交"
+        }
+
+    try:
         weeks = api_client.get_weeks_date()
         job_info = api_client.get_job_info()
-        logger.info("获取周报内容：调用AI生成")
         week = api_client.get_submitted_reports_count('week') + 1
-        content = generate_article(
-            f"第{week}周周报",
-            job_info
-        )
-        logger.info("周报内容获取成功，开始提交周报")
+        content = generate_article(config, f"第{week}周周报", job_info)
         report_info = {
             'title': f"第{week}周周报",
             'content': content,
@@ -138,49 +177,170 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> str:
             'weeks': f"第{week}周"
         }
         api_client.submit_report(report_info)
-        return f"周报：第{week}周周报已提交\n\n"
-    else:
-        logger.info("未到周报提交时间")
-        return "周报：未到周报提交时间\n\n"
+        return {
+            "status": "success",
+            "message": f"第{week}周周报已提交",
+            "task_type": "周报提交",
+            "details": {
+                "周报标题": f"第{week}周周报",
+                "开始时间": weeks.get('startTime'),
+                "结束时间": weeks.get('endTime')
+            },
+            "report_content": content
+        }
+    except Exception as e:
+        logger.error(f"周报提交失败: {e}")
+        return {
+            "status": "fail",
+            "message": f"周报提交失败: {str(e)}",
+            "task_type": "周报提交"
+        }
 
 
-def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> str:
+def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[str, Any]:
     """提交月报"""
-    if config.get_config("submit_monthly_time") == time.strftime('%d'):
+    if not config.get_config("isSubmittedMonthlyReport"):
+        return {
+            "status": "skip",
+            "message": "用户未开启月报提交功能",
+            "task_type": "月报提交"
+        }
+
+    current_time = datetime.now()
+    last_day_of_month = (current_time.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    submit_day = int(config.get_config("submit_monthly_time"))
+
+    if current_time.day != min(submit_day, last_day_of_month.day) or current_time.hour < 12:
+        return {
+            "status": "skip",
+            "message": "未到月报提交时间（需指定日期12点后）",
+            "task_type": "月报提交"
+        }
+
+    try:
         job_info = api_client.get_job_info()
+        month = api_client.get_submitted_reports_count('month') + 1
+        content = generate_article(config, f"第{month}月月报", job_info)
         report_info = {
-            'title': f"第{api_client.get_submitted_reports_count('week') + 1}月月报",
-            'content': '',
+            'title': f"第{month}月月报",
+            'content': content,
             'attachments': '',
-            'yearmonth': time.strftime('%Y-%m', time.localtime()),
+            'yearmonth': current_time.strftime('%Y-%m'),
             'reportType': 'month',
             'jobId': job_info.get('jobId'),
         }
         api_client.submit_report(report_info)
-        return f"月报：第{api_client.get_submitted_reports_count('week') + 1}月月报已提交\n\n"
-    else:
-        logger.info("未到月报提交时间")
-        return "月报：未到月报提交时间\n\n"
+        return {
+            "status": "success",
+            "message": f"第{month}月月报已提交",
+            "task_type": "月报提交",
+            "details": {
+                "月报标题": f"第{month}月月报",
+                "提交月份": current_time.strftime('%Y-%m')
+            },
+            "report_content": content
+        }
+    except Exception as e:
+        logger.error(f"月报提交失败: {e}")
+        return {
+            "status": "fail",
+            "message": f"月报提交失败: {str(e)}",
+            "task_type": "月报提交"
+        }
 
 
-def push_notification(config: ConfigManager, title: str, message: str) -> None:
+def generate_markdown_message(results: List[Dict[str, Any]]) -> str:
+    """生成 Markdown 格式的消息"""
+    message = "# 工学云任务执行报告\n\n"
+
+    # 任务执行统计
+    total_tasks = len(results)
+    success_tasks = sum(1 for result in results if result.get("status") == "success")
+    fail_tasks = sum(1 for result in results if result.get("status") == "fail")
+    skip_tasks = sum(1 for result in results if result.get("status") == "skip")
+
+    message += "## 📊 执行统计\n\n"
+    message += f"- 总任务数：{total_tasks}\n"
+    message += f"- 成功：{success_tasks}\n"
+    message += f"- 失败：{fail_tasks}\n"
+    message += f"- 跳过：{skip_tasks}\n\n"
+
+    # 详细任务报告
+    message += "## 📝 详细任务报告\n\n"
+
+    for result in results:
+        task_type = result.get("task_type", "未知任务")
+        status = result.get("status", "unknown")
+        status_emoji = {
+            "success": "✅",
+            "fail": "❌",
+            "skip": "⏭️"
+        }.get(status, "❓")
+
+        message += f"### {status_emoji} {task_type}\n\n"
+        message += f"**状态**：{status}\n\n"
+        message += f"**结果**：{result.get('message', '无消息')}\n\n"
+
+        details = result.get("details")
+        if status == "success" and isinstance(details, dict):
+            message += "**详细信息**：\n\n"
+            for key, value in details.items():
+                message += f"- **{key}**：{value}\n"
+            message += "\n"
+
+        # 添加报告内容（如果有）
+        if status == "success" and task_type in ["日报提交", "周报提交", "月报提交"]:
+            report_content = result.get("report_content", "")
+            if report_content:
+                preview = report_content[:200] + "..." if len(report_content) > 200 else report_content
+                message += f"**报告预览**：\n\n{preview}\n\n"
+                message += "<details>\n"
+                message += "<summary>点击查看完整报告</summary>\n\n"
+                message += f"```\n{report_content}\n```\n"
+                message += "</details>\n\n"
+
+        message += "---\n\n"
+
+    return message
+
+
+def push_notification(config: ConfigManager, results: List[Dict[str, Any]], message: str) -> None:
     """发送推送消息"""
     push_key = config.get_config('pushKey')
     push_type = config.get_config('pushType')
 
     if push_key and push_type:
         pusher = MessagePusher(push_key, push_type)
+
+        success_count = sum(1 for result in results if result.get("status") == "success")
+        total_count = len(results)
+
+        # 简化标题，使用表情符号表示状态
+        status_emoji = "🎉" if success_count == total_count else "📊"
+        title = f"{status_emoji} 工学云报告 ({success_count}/{total_count})"
+
         pusher.push(title, message)
     else:
         logger.info("用户未配置推送")
 
 
-def main() -> None:
-    """程序主入口，执行打卡程序。
+def run(config: ConfigManager) -> None:
+    """执行所有任务"""
+    api_client = get_api_client(config)
 
-    遍历用户目录中的配置文件，依次执行打卡流程，并记录程序的开始和结束信息。
-    """
-    logger.info("工学云打卡开始")
+    logger.info(f'开始执行：{config.get_user_info('nikeName')}')
+    results: List[Dict[str, Any]] = [perform_clock_in(api_client, config), submit_daily_report(api_client, config),
+                                     submit_weekly_report(config, api_client),
+                                     submit_monthly_report(config, api_client)]
+
+    message = generate_markdown_message(results)
+    push_notification(config, results, message)
+    logger.info(f'执行结束：{config.get_user_info('nikeName')}\n')
+
+
+def main() -> None:
+    """程序主入口"""
+    logger.info("工学云任务开始")
 
     json_files = [f for f in os.listdir(USER_DIR) if f.endswith('.json')]
     if not json_files:
@@ -190,7 +350,7 @@ def main() -> None:
     for filename in json_files:
         run(ConfigManager(os.path.join(USER_DIR, filename)))
 
-    logger.info("工学云打卡结束")
+    logger.info("工学云任务结束")
 
 
 if __name__ == '__main__':

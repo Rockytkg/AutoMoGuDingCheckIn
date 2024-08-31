@@ -1,7 +1,13 @@
-import logging
-import time
 import json
+import logging
+import os
+import tempfile
+import time
+
 import requests
+from requests.exceptions import RequestException
+from PIL import Image
+
 from util.Tool import create_sign, aes_encrypt, aes_decrypt, get_current_month_info
 
 # 常量
@@ -18,7 +24,7 @@ logging.basicConfig(
     level=logging.INFO,
     datefmt='%Y-%m-%d %I:%M:%S'
 )
-api_module_log = logging.getLogger('ApiModule')
+logger = logging.getLogger('ApiModule')
 
 
 class ApiClient:
@@ -71,7 +77,7 @@ class ApiClient:
             if rsp.get('code') != 200:
                 error_msg = rsp.get('msg', '未知错误')
                 if 'token失效' in error_msg and retry_count < self.max_retries:
-                    api_module_log.info('Token失效，正在重新登录...')
+                    logger.info('Token失效，正在重新登录...')
                     self.login()  # 重新登录以更新 token
                     headers['authorization'] = self.config_manager.get_user_info('token')  # 更新 token
                     return self._post_request(url, headers, data, msg, retry_count + 1)  # 递归重试请求
@@ -81,7 +87,7 @@ class ApiClient:
             return rsp
 
         except requests.RequestException as e:
-            api_module_log.error(f'{msg}: {e}')
+            logger.error(f'{msg}: {e}')
             raise ValueError(f'{msg}: {str(e)}')
 
     def login(self):
@@ -175,7 +181,7 @@ class ApiClient:
                 report_type
             ]
         )
-        rsp = self._post_request(url, headers, data, '获取周报列表失败')
+        rsp = self._post_request(url, headers, data, '获取报告列表失败')
         return rsp.get('flag')
 
     def submit_report(self, report_info):
@@ -301,7 +307,7 @@ class ApiClient:
         :raises ValueError: 如果打卡提交失败，抛出包含详细错误信息的异常。
         """
         url = 'attendence/clock/v4/save'
-        api_module_log.info(f'打卡类型：{checkin_info.get("type")}')
+        logger.info(f'打卡类型：{checkin_info.get("type")}')
 
         data = {
             "distance": None,
@@ -365,6 +371,23 @@ class ApiClient:
 
         self._post_request(url, headers, data, '打卡失败')
 
+    def get_upload_token(self):
+        """
+        获取上传文件的认证令牌。
+
+        该方法会发送请求获取上传文件的认证令牌。
+
+        :return: 上传文件的认证令牌。
+        :rtype: str
+        """
+        url = '/session/upload/v1/token'
+        headers = self._get_authenticated_headers()
+        data = {
+            "t": aes_encrypt(str(int(time.time() * 1000)))
+        }
+        rsp = self._post_request(url, headers, data, '获取上传文件的认证令牌失败')
+        return rsp.get('data', '')
+
     def _get_authenticated_headers(self, sign_data=None):
         """
         生成带有认证信息的请求头。
@@ -389,18 +412,16 @@ class ApiClient:
         return headers
 
 
-def generate_article(tittle, job_info):
-    # 设置请求头，包含认证信息
+def generate_article(config, tittle, job_info, count=500, max_retries=3, retry_delay=1):
     headers = {
-        'Authorization': f'Bearer sk-m8ztJpDutdnLVEba2rcAgfS9XADm1iFfFW9YrkpPz1RTXEIc',
+        'Authorization': f'Bearer {config.get_config('apikey')}',
     }
 
-    # 设置请求体
     data = {
-        "model": "gpt-4o-2024-08-06",
+        "model": config.get_config('model'),
         "messages": [
             {"role": "system",
-             "content": "According to the information provided by the user, write an article according to the template, the reply does not allow the use of Markdown syntax, the content is in line with the job description, the content of the article is fluent, in line with the Chinese grammatical conventions"},
+             "content": f"According to the information provided by the user, write an article according to the template, the reply does not allow the use of Markdown syntax, the content is in line with the job description, the content of the article is fluent, in line with the Chinese grammatical conventions,Number of characters greater than {count}"},
             {"role": "system",
              "content": "模板：实习地点：xxxx\n\n工作内容：\n\nxzzzx\n\n工作总结：\n\nxxxxxx\n\n遇到问题：\n\nxzzzx\n\n自我评价：\n\nxxxxxx"},
             {"role": "user",
@@ -409,11 +430,115 @@ def generate_article(tittle, job_info):
         ]
     }
 
-    # 发送POST请求
-    response = requests.post('https://aigptx.top/v1/chat/completions', headers=headers, json=data)
+    url = f"{config.get_config('apiUrl').rstrip('/')}/v1/chat/completions"
 
-    # 检查响应状态码并返回结果
-    if response.status_code == 200:
-        return response.json()['choices'][0]['message']['content']
-    else:
-        return None
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"第 {attempt + 1} 次尝试生成文章")
+            response = requests.post(url=url, headers=headers, json=data, timeout=30)
+            response.raise_for_status()
+            logger.info("文章生成成功")
+            return response.json()['choices'][0]['message']['content']
+        except RequestException as e:
+            logger.warning(f"第 {attempt + 1} 次尝试失败: {str(e)}")
+            if attempt == max_retries - 1:
+                logger.error(f"达到最大重试次数。最后一次错误: {str(e)}")
+                raise ValueError(f"达到最大重试次数。最后一次错误: {str(e)}")
+            time.sleep(retry_delay)
+        except (KeyError, IndexError) as e:
+            logger.error(f"解析响应时出错: {str(e)}")
+            raise ValueError(f"解析响应时出错: {str(e)}")
+        except Exception as e:
+            logger.error(f"发生意外错误: {str(e)}")
+            raise ValueError(f"发生意外错误: {str(e)}")
+
+
+def upload(token, images, config, max_retries=3, retry_delay=1):
+    """
+    上传图片（支持一次性上传多张图片）
+
+    :param token: 上传文件的认证令牌
+    :type token: str
+    :param images: 图片路径列表
+    :type images: list
+    :param config: 配置
+    :type config: ConfigManager
+    :param max_retries: 最大重试次数
+    :type max_retries: int
+    :param retry_delay: 重试延迟（秒）
+    :type retry_delay: int
+    :return: 成功上传的图片key，用逗号分隔
+    :rtype: str
+    """
+    url = 'https://up.qiniup.com/'
+    headers = {
+        'host': 'up.qiniup.com',
+        'accept-encoding': 'gzip',
+        'user-agent': 'Dart / 2.17(dart:io)'
+    }
+
+    successful_keys = []
+
+    for image_path in images:
+        for attempt in range(max_retries):
+            try:
+                # 使用临时文件处理图片
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+                    # 打开并转换图片为JPG格式
+                    with Image.open(image_path) as img:
+                        # 如果图片大于1MB，进行压缩
+                        if os.path.getsize(image_path) > 1_000_000:
+                            img = img.convert('RGB')
+                            img.save(temp_file.name, 'JPEG', quality=70, optimize=True)
+                        else:
+                            img = img.convert('RGB')
+                            img.save(temp_file.name, 'JPEG')
+
+                    # 读取处理后的图片内容
+                    with open(temp_file.name, 'rb') as f:
+                        key = (
+                            f"upload/{config.get_user_info('orgJson').get('snowFlakeId', '')}"
+                            f"/{time.strftime('%Y-%m-%d', time.localtime())}"
+                            f"/report/{config.get_user_info('userId')}_{int(time.time() * 1000000)}.jpg"
+                        )
+                        data = {
+                            'token': token,
+                            'key': key,
+                            'x-qn-meta-fname': f'{int(time.time() * 1000)}.jpg'
+                        }
+
+                        files = {
+                            'file': (key, f, 'application/octet-stream')
+                        }
+                        response = requests.post(url, headers=headers, files=files, data=data)
+                        response.raise_for_status()  # 如果响应状态不是200，将引发HTTPError异常
+
+                        # 检查响应中是否包含key字段
+                        response_data = response.json()
+                        if 'key' in response_data:
+                            successful_keys.append(response_data['key'])
+                        else:
+                            logging.warning(f"上传成功但响应中没有key字段: {image_path}")
+
+                # 如果成功上传，跳出重试循环
+                break
+
+            except requests.exceptions.RequestException as e:
+                logging.error(f"上传失败 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
+                if attempt == max_retries - 1:
+                    logging.error(f"上传失败，已达到最大重试次数: {image_path}")
+                    raise ValueError(f"上传失败，已达到最大重试次数: {image_path}")
+                else:
+                    time.sleep(retry_delay)
+
+            except Exception as e:
+                logging.error(f"处理图片时发生错误: {str(e)}")
+                raise ValueError(f"处理图片时发生错误: {str(e)}")
+
+            finally:
+                # 删除临时文件
+                if os.path.exists(temp_file.name):
+                    os.unlink(temp_file.name)
+
+    # 返回成功上传的图片key，用逗号分隔
+    return ','.join(successful_keys)
