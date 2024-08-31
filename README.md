@@ -81,8 +81,8 @@ AutoMoGuDingCheckIn 旨在：
     "is_submit_daily": false,
     "is_submit_weekly": false,
     "is_submit_month_report": false,
-    "submit_weekly_time": 2,
-    "submit_month_report_time": 30,
+    "submit_weekly_time": "2",
+    "submit_month_report_time": "30",
     "pushType": null,
     "pushKey": null,
     "device": "{brand: OnePlus PHP110, systemVersion: 14, Platform: Android, isPhysicalDevice: true, incremental: T.18b885b-be80-be7f}"
