@@ -293,7 +293,8 @@ class ApiClient:
             "t": aes_encrypt(str(int(time.time() * 1000)))
         }
         rsp = self._post_request(url, headers, data, '获取打卡信息失败')
-        return rsp.get('data', {})[0]
+        # 每月第一天的第一次打卡返回的是空，所以特殊处理返回空字典
+        return rsp.get('data', [{}])[0] if rsp.get('data') else {}
 
     def submit_clock_in(self, checkin_info):
         """
@@ -314,7 +315,7 @@ class ApiClient:
             "address": self.config_manager.get_config('address'),
             "content": None,
             "lastAddress": None,
-            "lastDetailAddress": checkin_info.get('address'),
+            "lastDetailAddress": checkin_info.get('lastDetailAddress'),
             "attendanceId": None,
             "city": self.config_manager.get_config('city'),
             "area": self.config_manager.get_config('area'),
@@ -414,7 +415,7 @@ class ApiClient:
 
 def generate_article(config, tittle, job_info, count=500, max_retries=3, retry_delay=1):
     headers = {
-        'Authorization': f'Bearer {config.get_config('apikey')}',
+        'Authorization': f"Bearer {config.get_config('apikey')}",
     }
 
     data = {
@@ -515,6 +516,7 @@ def upload(token, images, config, max_retries=3, retry_delay=1):
 
                         # 检查响应中是否包含key字段
                         response_data = response.json()
+                        print(response_data)
                         if 'key' in response_data:
                             successful_keys.append(response_data['key'])
                         else:

@@ -1,9 +1,10 @@
 import logging
 import os
+import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
 
-from util.Api import ApiClient, generate_article
+from util.Api import ApiClient, generate_article, upload
 from util.Config import ConfigManager
 from util.MessagePush import MessagePusher
 
@@ -30,21 +31,39 @@ def get_api_client(config: ConfigManager) -> ApiClient:
     return api_client
 
 
+def upload_img(api_client: ApiClient, config: ConfigManager, count: int) -> str:
+    """上传指定数量的图片"""
+    # 检查数量是否大于0
+    if count <= 0:
+        return ""
+
+    images_dir = os.path.join(os.path.dirname(__file__), "images")
+    # 获取所有符合条件的图片文件
+    all_images = [os.path.join(images_dir, f) for f in os.listdir(images_dir) if
+                  f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
+    # 检查可用图片数量
+    if len(all_images) < count:
+        return ""
+
+    # 随机选择指定数量的图片
+    images = random.sample(all_images, count)
+
+    # 获取上传令牌并上传图片
+    token = api_client.get_upload_token()
+    return upload(token, images, config)
+
+
 def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, Any]:
     """执行打卡操作"""
     try:
-        user_name = config.get_user_info('nikeName')
         current_time = datetime.now()
         current_hour = current_time.hour
 
-        # 定义打卡时间范围
-        morning_start, morning_end = 8, 12
-        afternoon_start, afternoon_end = 17, 20
-
-        # 判断当前是否在打卡时间范围内
-        if morning_start <= current_hour < morning_end:
+        # 判断打卡类型
+        if 8 <= current_hour < 12:
             checkin_type = 'START'
-        elif afternoon_start <= current_hour < afternoon_end:
+        elif 17 <= current_hour < 20:
             checkin_type = 'END'
         else:
             return {
@@ -53,34 +72,38 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
                 "task_type": "打卡"
             }
 
-        # 获取上次打卡信息
         last_checkin_info = api_client.get_checkin_info()
 
         # 检查是否已经打过卡
-        last_checkin_time = datetime.strptime(last_checkin_info['createTime'], "%Y-%m-%d %H:%M:%S")
-        if last_checkin_info['type'] == checkin_type and last_checkin_time.date() == current_time.date():
-            return {
-                "status": "skip",
-                "message": f"今日{'上班' if checkin_type == 'START' else '下班'}卡已打，无需重复打卡",
-                "task_type": "打卡"
-            }
+        if last_checkin_info and last_checkin_info['type'] == checkin_type:
+            last_checkin_time = datetime.strptime(last_checkin_info['createTime'], "%Y-%m-%d %H:%M:%S")
+            if last_checkin_time.date() == current_time.date():
+                logger.info(f"今日{checkin_type}卡已打，无需重复打卡")
+                return {
+                    "status": "skip",
+                    "message": f"今日{checkin_type}卡已打，无需重复打卡",
+                    "task_type": "打卡"
+                }
 
-        logger.info(f'用户 {user_name} 开始{("上班" if checkin_type == "START" else "下班")}打卡')
+        user_name = config.get_user_info('nikeName')
+        logger.info(f'用户 {user_name} 开始{checkin_type}打卡')
 
-        # 更新打卡信息
-        checkin_info = last_checkin_info.copy()
-        checkin_info['type'] = checkin_type
+        # 设置打卡信息
+        checkin_info = {
+            'type': checkin_type,
+            'lastDetailAddress': last_checkin_info.get('address'),
+        }
 
         api_client.submit_clock_in(checkin_info)
 
         return {
             "status": "success",
-            "message": f"{'上班' if checkin_type == 'START' else '下班'}打卡成功",
+            "message": f"{checkin_type}打卡成功",
             "task_type": "打卡",
             "details": {
                 "姓名": user_name,
-                "打卡类型": '上班' if checkin_type == 'START' else '下班',
-                "打卡时间": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "打卡类型": checkin_type,
+                "打卡时间": current_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "打卡地点": config.get_config('address')
             }
         }
@@ -96,6 +119,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
 def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[str, Any]:
     """提交日报"""
     if not config.get_config("isSubmittedDaily"):
+        logger.info("用户未开启日报提交功能，跳过日报提交任务")
         return {
             "status": "skip",
             "message": "用户未开启日报提交功能",
@@ -104,6 +128,7 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
 
     current_time = datetime.now()
     if current_time.hour < 12:
+        logger.info("未到日报提交时间（需12点后）")
         return {
             "status": "skip",
             "message": "未到日报提交时间（需12点后）",
@@ -114,22 +139,29 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
         job_info = api_client.get_job_info()
         report_count = api_client.get_submitted_reports_count("day") + 1
         content = generate_article(config, f"第{report_count}天日报", job_info)
+
+        # 上传图片并获取附件
+        attachments = upload_img(api_client, config, config.get_config("dailyReportImageCount"))  # 假设上传3张图片
+
         report_info = {
             'title': f'第{report_count}天日报',
             'content': content,
-            'attachments': '',
+            'attachments': attachments,  # 设置附件
             'reportType': 'day',
             'jobId': job_info.get('jobId'),
             'reportTime': current_time.strftime('%Y-%m-%d %H:%M:%S')
         }
         api_client.submit_report(report_info)
+
+        logger.info(f"第{report_count}天日报已提交，提交时间：{current_time.strftime('%Y-%m-%d %H:%M:%S')}")
         return {
             "status": "success",
             "message": f"第{report_count}天日报已提交",
             "task_type": "日报提交",
             "details": {
                 "日报标题": f'第{report_count}天日报',
-                "提交时间": current_time.strftime('%Y-%m-%d %H:%M:%S')
+                "提交时间": current_time.strftime('%Y-%m-%d %H:%M:%S'),
+                "附件": attachments  # 添加附件信息
             },
             "report_content": content
         }
@@ -145,6 +177,7 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
 def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[str, Any]:
     """提交周报"""
     if not config.get_config("isSubmittedWeekly"):
+        logger.info("用户未开启周报提交功能，跳过周报提交任务")
         return {
             "status": "skip",
             "message": "用户未开启周报提交功能",
@@ -155,6 +188,7 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
     submit_day = int(config.get_config("submitWeeklyTime"))
 
     if current_time.weekday() + 1 != submit_day or current_time.hour < 12:
+        logger.info("未到周报提交时间（需指定日期12点后）")
         return {
             "status": "skip",
             "message": "未到周报提交时间（需指定日期12点后）",
@@ -166,10 +200,14 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
         job_info = api_client.get_job_info()
         week = api_client.get_submitted_reports_count('week') + 1
         content = generate_article(config, f"第{week}周周报", job_info)
+
+        # 上传图片并获取附件
+        attachments = upload_img(api_client, config, config.get_config("weeklyReportImageCount"))  # 假设上传3张图片
+
         report_info = {
             'title': f"第{week}周周报",
             'content': content,
-            'attachments': '',
+            'attachments': attachments,  # 设置附件
             'reportType': 'week',
             'endTime': weeks.get('endTime'),
             'startTime': weeks.get('startTime'),
@@ -177,6 +215,9 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
             'weeks': f"第{week}周"
         }
         api_client.submit_report(report_info)
+
+        logger.info(f"第{week}周周报已提交，开始时间：{weeks.get('startTime')}, 结束时间：{weeks.get('endTime')}")
+
         return {
             "status": "success",
             "message": f"第{week}周周报已提交",
@@ -184,7 +225,8 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
             "details": {
                 "周报标题": f"第{week}周周报",
                 "开始时间": weeks.get('startTime'),
-                "结束时间": weeks.get('endTime')
+                "结束时间": weeks.get('endTime'),
+                "附件": attachments  # 添加附件信息
             },
             "report_content": content
         }
@@ -200,6 +242,7 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
 def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[str, Any]:
     """提交月报"""
     if not config.get_config("isSubmittedMonthlyReport"):
+        logger.info("用户未开启月报提交功能，跳过月报提交任务")
         return {
             "status": "skip",
             "message": "用户未开启月报提交功能",
@@ -211,6 +254,7 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
     submit_day = int(config.get_config("submit_monthly_time"))
 
     if current_time.day != min(submit_day, last_day_of_month.day) or current_time.hour < 12:
+        logger.info("未到月报提交时间（需指定日期12点后）")
         return {
             "status": "skip",
             "message": "未到月报提交时间（需指定日期12点后）",
@@ -221,22 +265,30 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
         job_info = api_client.get_job_info()
         month = api_client.get_submitted_reports_count('month') + 1
         content = generate_article(config, f"第{month}月月报", job_info)
+
+        # 上传图片并获取附件
+        attachments = upload_img(api_client, config, config.get_config("monthlyReportImageCount"))
+
         report_info = {
             'title': f"第{month}月月报",
             'content': content,
-            'attachments': '',
+            'attachments': attachments,  # 设置附件
             'yearmonth': current_time.strftime('%Y-%m'),
             'reportType': 'month',
             'jobId': job_info.get('jobId'),
         }
         api_client.submit_report(report_info)
+
+        logger.info(f"第{month}月月报已提交，提交月份：{current_time.strftime('%Y-%m')}")
+
         return {
             "status": "success",
             "message": f"第{month}月月报已提交",
             "task_type": "月报提交",
             "details": {
                 "月报标题": f"第{month}月月报",
-                "提交月份": current_time.strftime('%Y-%m')
+                "提交月份": current_time.strftime('%Y-%m'),
+                "附件": attachments  # 添加附件信息
             },
             "report_content": content
         }
@@ -343,7 +395,7 @@ def run(config: ConfigManager) -> None:
         logger.info("任务异常结束\n")
         return  # 终止执行当前用户的所有任务
 
-    logger.info(f'开始执行：{config.get_user_info('nikeName')}')
+    logger.info(f"开始执行：{config.get_user_info('nikeName')}")
 
     try:
         results = [
@@ -363,7 +415,7 @@ def run(config: ConfigManager) -> None:
 
     message = generate_markdown_message(results)
     push_notification(config, results, message)
-    logger.info(f'执行结束：{config.get_user_info('nikeName')}\n')
+    logger.info(f"执行结束：{config.get_user_info('nikeName')}\n")
 
 
 def main() -> None:
