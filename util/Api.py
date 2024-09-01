@@ -156,14 +156,14 @@ class ApiClient:
         rsp = self._post_request(url, headers, data, '获取岗位信息失败')
         return rsp.get('data', {})
 
-    def get_submitted_reports_count(self, report_type):
+    def get_submitted_reports_info(self, report_type):
         """
         获取已经提交的日报、周报或月报的数量。
 
         :param report_type: 报告类型，可选值为 "day"（日报）、"week"（周报）或 "month"（月报）。
         :type report_type: str
         :return: 已经提交的报告数量。
-        :rtype: int
+        :rtype: dict
         :raises ValueError: 如果获取数量失败，抛出包含详细错误信息的异常。
         """
         url = '/practice/paper/v2/listByStu'
@@ -182,7 +182,8 @@ class ApiClient:
             ]
         )
         rsp = self._post_request(url, headers, data, '获取报告列表失败')
-        return rsp.get('flag')
+
+        return rsp
 
     def submit_report(self, report_info):
         """

@@ -66,6 +66,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
         elif 17 <= current_hour < 20:
             checkin_type = 'END'
         else:
+            logger.info("当前不在打卡时间范围内")
             return {
                 "status": "skip",
                 "message": "当前不在打卡时间范围内",
@@ -95,6 +96,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
         }
 
         api_client.submit_clock_in(checkin_info)
+        logger.info(f'用户 {user_name} {checkin_type}打卡成功')
 
         return {
             "status": "success",
@@ -136,17 +138,33 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
         }
 
     try:
+        # 获取历史提交记录
+        submitted_reports_info = api_client.get_submitted_reports_info("day")
+        submitted_reports = submitted_reports_info.get('data', [])
+
+        # 检查是否已经提交过今天的日报
+        if submitted_reports:
+            last_report = submitted_reports[0]
+            last_submit_time = datetime.strptime(last_report['createTime'], '%Y-%m-%d %H:%M:%S')
+            if last_submit_time.date() == current_time.date():
+                logger.info("今天已经提交过日报，跳过本次提交")
+                return {
+                    "status": "skip",
+                    "message": "今天已经提交过日报",
+                    "task_type": "日报提交"
+                }
+
         job_info = api_client.get_job_info()
-        report_count = api_client.get_submitted_reports_count("day") + 1
+        report_count = submitted_reports_info.get('flag', 0) + 1
         content = generate_article(config, f"第{report_count}天日报", job_info)
 
         # 上传图片并获取附件
-        attachments = upload_img(api_client, config, config.get_config("dailyReportImageCount"))  # 假设上传3张图片
+        attachments = upload_img(api_client, config, config.get_config("dailyReportImageCount"))
 
         report_info = {
             'title': f'第{report_count}天日报',
             'content': content,
-            'attachments': attachments,  # 设置附件
+            'attachments': attachments,
             'reportType': 'day',
             'jobId': job_info.get('jobId'),
             'reportTime': current_time.strftime('%Y-%m-%d %H:%M:%S')
@@ -161,7 +179,7 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
             "details": {
                 "日报标题": f'第{report_count}天日报',
                 "提交时间": current_time.strftime('%Y-%m-%d %H:%M:%S'),
-                "附件": attachments  # 添加附件信息
+                "附件": attachments
             },
             "report_content": content
         }
@@ -196,27 +214,48 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
         }
 
     try:
-        weeks = api_client.get_weeks_date()
+        # 获取当前周信息
+        current_week_info = api_client.get_weeks_date()
+
+        # 获取历史提交记录
+        submitted_reports_info = api_client.get_submitted_reports_info('week')
+        submitted_reports = submitted_reports_info.get('data', [])
+
+        # 获取当前周数
+        week = submitted_reports_info.get('flag', 0) + 1
+        current_week_string = f"第{week}周"
+
+        # 检查是否已经提交过本周的周报
+        if submitted_reports:
+            last_report = submitted_reports[0]
+            if last_report.get('weeks') == current_week_string:
+                logger.info("本周已经提交过周报，跳过本次提交")
+                return {
+                    "status": "skip",
+                    "message": "本周已经提交过周报",
+                    "task_type": "周报提交"
+                }
+
         job_info = api_client.get_job_info()
-        week = api_client.get_submitted_reports_count('week') + 1
         content = generate_article(config, f"第{week}周周报", job_info)
 
         # 上传图片并获取附件
-        attachments = upload_img(api_client, config, config.get_config("weeklyReportImageCount"))  # 假设上传3张图片
+        attachments = upload_img(api_client, config, config.get_config("weeklyReportImageCount"))
 
         report_info = {
             'title': f"第{week}周周报",
             'content': content,
-            'attachments': attachments,  # 设置附件
+            'attachments': attachments,
             'reportType': 'week',
-            'endTime': weeks.get('endTime'),
-            'startTime': weeks.get('startTime'),
+            'endTime': current_week_info.get('endTime'),
+            'startTime': current_week_info.get('startTime'),
             'jobId': job_info.get('jobId'),
-            'weeks': f"第{week}周"
+            'weeks': current_week_string
         }
         api_client.submit_report(report_info)
 
-        logger.info(f"第{week}周周报已提交，开始时间：{weeks.get('startTime')}, 结束时间：{weeks.get('endTime')}")
+        logger.info(
+            f"第{week}周周报已提交，开始时间：{current_week_info.get('startTime')}, 结束时间：{current_week_info.get('endTime')}")
 
         return {
             "status": "success",
@@ -224,9 +263,9 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
             "task_type": "周报提交",
             "details": {
                 "周报标题": f"第{week}周周报",
-                "开始时间": weeks.get('startTime'),
-                "结束时间": weeks.get('endTime'),
-                "附件": attachments  # 添加附件信息
+                "开始时间": current_week_info.get('startTime'),
+                "结束时间": current_week_info.get('endTime'),
+                "附件": attachments
             },
             "report_content": content
         }
@@ -262,8 +301,26 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
         }
 
     try:
+        # 获取当前年月
+        current_yearmonth = current_time.strftime('%Y-%m')
+
+        # 获取历史提交记录
+        submitted_reports_info = api_client.get_submitted_reports_info('month')
+        submitted_reports = submitted_reports_info.get('data', [])
+
+        # 检查是否已经提交过本月的月报
+        if submitted_reports:
+            last_report = submitted_reports[0]
+            if last_report.get('yearmonth') == current_yearmonth:
+                logger.info("本月已经提交过月报，跳过本次提交")
+                return {
+                    "status": "skip",
+                    "message": "本月已经提交过月报",
+                    "task_type": "月报提交"
+                }
+
         job_info = api_client.get_job_info()
-        month = api_client.get_submitted_reports_count('month') + 1
+        month = submitted_reports_info.get('flag', 0) + 1
         content = generate_article(config, f"第{month}月月报", job_info)
 
         # 上传图片并获取附件
@@ -272,14 +329,14 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
         report_info = {
             'title': f"第{month}月月报",
             'content': content,
-            'attachments': attachments,  # 设置附件
-            'yearmonth': current_time.strftime('%Y-%m'),
+            'attachments': attachments,
+            'yearmonth': current_yearmonth,
             'reportType': 'month',
             'jobId': job_info.get('jobId'),
         }
         api_client.submit_report(report_info)
 
-        logger.info(f"第{month}月月报已提交，提交月份：{current_time.strftime('%Y-%m')}")
+        logger.info(f"第{month}月月报已提交，提交月份：{current_yearmonth}")
 
         return {
             "status": "success",
@@ -287,8 +344,8 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
             "task_type": "月报提交",
             "details": {
                 "月报标题": f"第{month}月月报",
-                "提交月份": current_time.strftime('%Y-%m'),
-                "附件": attachments  # 添加附件信息
+                "提交月份": current_yearmonth,
+                "附件": attachments
             },
             "report_content": content
         }
