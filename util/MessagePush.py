@@ -1,12 +1,13 @@
 import logging
 import requests
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 logging.basicConfig(format='[%(asctime)s] %(name)s %(levelname)s: %(message)s',
                     level=logging.INFO,
                     datefmt='%Y-%m-%d %I:%M:%S'
                     )
 logger = logging.getLogger('MessagePush')
+
 
 class MessagePusher:
     def __init__(self, token: str, push_type: str = "server"):
@@ -47,7 +48,7 @@ class MessagePusher:
             "desp": content,
             "noip": 1
         }
-        self._send_request(url, params, "Server酱")
+        self._send_request(url=url, json=params, service="Server酱")
 
     def _push_pushplus(self, title: str, content: str) -> None:
         """使用PushPlus推送消息。"""
@@ -58,7 +59,7 @@ class MessagePusher:
             "template": "markdown",
             "content": content
         }
-        self._send_request(url, params, "PushPlus")
+        self._send_request(url=url, json=params, service="PushPlus")
 
     def _push_anpush(self, title: str, content: str) -> None:
         """使用AnPush推送消息。"""
@@ -76,18 +77,23 @@ class MessagePusher:
             "channel": token_parts[1],
             "to": token_parts[2]
         }
-        self._send_request(url, params, "AnPush")
+        self._send_request(url=url, data=params, service="AnPush")
 
     @staticmethod
-    def _send_request(url: str, params: dict, service_name: str) -> None:
+    def _send_request(
+            url: str,
+            data: Optional[dict] = None,
+            json: Optional[dict] = None,
+            service: str = "Service"
+    ) -> None:
         """发送HTTP请求并处理响应。"""
         try:
-            response = requests.post(url=url, json=params, timeout=10)
+            response = requests.post(url=url, data=data, json=json, timeout=10)
             response.raise_for_status()
             result = response.json()
-            if result.get("code") == 200:
-                logger.info(f"{service_name}消息推送成功")
+            if result.get("code") == 200 or result.get("code") == 0:
+                logger.info(f"{service}消息推送成功")
             else:
-                logger.warning(f"{service_name}消息推送失败：{result.get('msg')}")
+                logger.warning(f"{service}消息推送失败：{result.get('msg')}")
         except requests.RequestException as e:
-            logger.error(f"{service_name}请求失败：{str(e)}")
+            logger.error(f"{service}请求失败：{str(e)}")
