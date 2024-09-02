@@ -1,5 +1,6 @@
 import logging
 import os
+import argparse
 import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
@@ -63,8 +64,10 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
         # 判断打卡类型
         if 8 <= current_hour < 12:
             checkin_type = 'START'
+            display_type = '上班'
         elif 17 <= current_hour < 20:
             checkin_type = 'END'
+            display_type = '下班'
         else:
             logger.info("当前不在打卡时间范围内")
             return {
@@ -79,15 +82,15 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
         if last_checkin_info and last_checkin_info['type'] == checkin_type:
             last_checkin_time = datetime.strptime(last_checkin_info['createTime'], "%Y-%m-%d %H:%M:%S")
             if last_checkin_time.date() == current_time.date():
-                logger.info(f"今日{checkin_type}卡已打，无需重复打卡")
+                logger.info(f"今日 {display_type} 卡已打，无需重复打卡")
                 return {
                     "status": "skip",
-                    "message": f"今日{checkin_type}卡已打，无需重复打卡",
+                    "message": f"今日 {display_type} 卡已打，无需重复打卡",
                     "task_type": "打卡"
                 }
 
         user_name = config.get_user_info('nikeName')
-        logger.info(f'用户 {user_name} 开始 {checkin_type} 打卡')
+        logger.info(f'用户 {user_name} 开始 {display_type} 打卡')
 
         # 设置打卡信息
         checkin_info = {
@@ -96,15 +99,15 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
         }
 
         api_client.submit_clock_in(checkin_info)
-        logger.info(f'用户 {user_name} {checkin_type} 打卡成功')
+        logger.info(f'用户 {user_name} {display_type} 打卡成功')
 
         return {
             "status": "success",
-            "message": f"{checkin_type}打卡成功",
+            "message": f"{display_type}打卡成功",
             "task_type": "打卡",
             "details": {
                 "姓名": user_name,
-                "打卡类型": checkin_type,
+                "打卡类型": display_type,
                 "打卡时间": current_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "打卡地点": config.get_config('address')
             }
@@ -116,6 +119,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
             "message": f"打卡失败: {str(e)}",
             "task_type": "打卡"
         }
+
 
 
 def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[str, Any]:
@@ -475,20 +479,31 @@ def run(config: ConfigManager) -> None:
     logger.info(f"执行结束：{config.get_user_info('nikeName')}\n")
 
 
-def main() -> None:
+def main(selected_files: list = None) -> None:
     """程序主入口"""
     logger.info("工学云任务开始")
 
-    json_files = [f for f in os.listdir(USER_DIR) if f.endswith('.json')]
+    json_files = {f[:-5]: f for f in os.listdir(USER_DIR) if f.endswith('.json')}  # 创建一个字典，以便快速查找
     if not json_files:
         logger.info("打卡文件未配置")
         return
 
-    for filename in json_files:
-        run(ConfigManager(os.path.join(USER_DIR, filename)))
+    if selected_files:
+        for selected_file in selected_files:
+            if selected_file in json_files:
+                run(ConfigManager(os.path.join(USER_DIR, json_files[selected_file])))
+            else:
+                logger.error(f"指定的文件 {selected_file}.json 不存在")
+    else:
+        for filename in json_files.values():
+            run(ConfigManager(os.path.join(USER_DIR, filename)))
 
     logger.info("工学云任务结束")
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description="运行工学云任务")
+    parser.add_argument('--file', type=str, nargs='+', help='指定要执行的配置文件名（不带路径和后缀），可以一次性指定多个')
+    args = parser.parse_args()
+
+    main(args.file)
