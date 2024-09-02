@@ -87,7 +87,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
                 }
 
         user_name = config.get_user_info('nikeName')
-        logger.info(f'用户 {user_name} 开始{checkin_type}打卡')
+        logger.info(f'用户 {user_name} 开始 {checkin_type} 打卡')
 
         # 设置打卡信息
         checkin_info = {
@@ -96,7 +96,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
         }
 
         api_client.submit_clock_in(checkin_info)
-        logger.info(f'用户 {user_name} {checkin_type}打卡成功')
+        logger.info(f'用户 {user_name} {checkin_type} 打卡成功')
 
         return {
             "status": "success",

@@ -1,7 +1,6 @@
 import logging
 import requests
 from typing import Callable, Dict
-from enum import Enum, auto
 
 logging.basicConfig(format='[%(asctime)s] %(name)s %(levelname)s: %(message)s',
                     level=logging.INFO,
@@ -9,25 +8,20 @@ logging.basicConfig(format='[%(asctime)s] %(name)s %(levelname)s: %(message)s',
                     )
 logger = logging.getLogger('MessagePush')
 
-class PushType(Enum):
-    SERVER = auto()
-    PUSHPLUS = auto()
-    ANPUSH = auto()
-
 class MessagePusher:
-    def __init__(self, token: str, push_type: PushType = PushType.SERVER):
+    def __init__(self, token: str, push_type: str = "server"):
         """
         初始化MessagePusher实例。
 
         :param token: 用于消息推送的认证Token。
-        :param push_type: 消息推送的类型，默认为PushType.SERVER。
+        :param push_type: 消息推送的类型，默认为"server"。
         """
         self.token = token
-        self.push_type = push_type
-        self.push_functions: Dict[PushType, Callable[[str, str], None]] = {
-            PushType.SERVER: self._push_server,
-            PushType.PUSHPLUS: self._push_pushplus,
-            PushType.ANPUSH: self._push_anpush
+        self.push_type = push_type.lower()
+        self.push_functions: Dict[str, Callable[[str, str], None]] = {
+            "server": self._push_server,
+            "pushplus": self._push_pushplus,
+            "anpush": self._push_anpush
         }
 
     def push(self, title: str, content: str) -> None:
@@ -97,4 +91,3 @@ class MessagePusher:
                 logger.warning(f"{service_name}消息推送失败：{result.get('msg')}")
         except requests.RequestException as e:
             logger.error(f"{service_name}请求失败：{str(e)}")
-

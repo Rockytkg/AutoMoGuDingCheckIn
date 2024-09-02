@@ -147,7 +147,7 @@ class ApiClient:
 
         :raises ValueError: 如果获取岗位信息失败，抛出包含详细错误信息的异常。
         """
-        url = '/practice/job/v4/infoByStu'
+        url = 'practice/job/v4/infoByStu'
         data = {
             "planId": self.config_manager.get_plan_info('planId'),
             "t": aes_encrypt(str(int(time.time() * 1000)))
@@ -166,7 +166,7 @@ class ApiClient:
         :rtype: dict
         :raises ValueError: 如果获取数量失败，抛出包含详细错误信息的异常。
         """
-        url = '/practice/paper/v2/listByStu'
+        url = 'practice/paper/v2/listByStu'
         data = {
             "currPage": 1,
             "pageSize": 10,
@@ -195,7 +195,7 @@ class ApiClient:
         :rtype: None
         :raises ValueError: 如果提交报告失败，抛出包含详细错误信息的异常。
         """
-        url = '/practice/paper/v5/save'
+        url = 'practice/paper/v5/save'
         headers = self._get_authenticated_headers(
             sign_data=[
                 self.config_manager.get_user_info('userId'),
@@ -268,7 +268,7 @@ class ApiClient:
         :return: 包含周报周报周期信息的字典。
         :rtype: dict
         """
-        url = '/practice/paper/v3/getWeeks1'
+        url = 'practice/paper/v3/getWeeks1'
         data = {
             "t": aes_encrypt(str(int(time.time() * 1000)))
         }
@@ -287,7 +287,7 @@ class ApiClient:
 
         :raises ValueError: 如果获取打卡信息失败，抛出包含详细错误信息的异常。
         """
-        url = '/attendence/clock/v2/listSynchro'
+        url = 'attendence/clock/v2/listSynchro'
         headers = self._get_authenticated_headers()
         data = {
             **get_current_month_info(),
@@ -382,7 +382,7 @@ class ApiClient:
         :return: 上传文件的认证令牌。
         :rtype: str
         """
-        url = '/session/upload/v1/token'
+        url = 'session/upload/v1/token'
         headers = self._get_authenticated_headers()
         data = {
             "t": aes_encrypt(str(int(time.time() * 1000)))
