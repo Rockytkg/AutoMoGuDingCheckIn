@@ -45,12 +45,12 @@ class ApiClient:
         :type config_manager: ConfigManager
         """
         self.config_manager = config_manager
-        self.max_retries = 1  # 控制重新尝试的次数
+        self.max_retries = 3  # 控制重新尝试的次数
 
     def _post_request(self, url, headers, data, msg='请求失败', retry_count=0):
         """
         发送POST请求，并处理请求过程中可能发生的错误。
-        如果返回的响应码不是200，且错误消息表明Token失效，会自动尝试重新登录并重试请求。
+        包括自动重试机制和Token失效处理。
 
         :param url: 请求的API地址（不包括BASE_URL部分）。
         :type url: str
@@ -69,26 +69,35 @@ class ApiClient:
         :raises ValueError: 如果请求失败或响应包含错误信息，则抛出包含详细错误信息的异常。
         """
         try:
-            response = requests.post(f'{BASE_URL}{url}', headers=headers, json=data)
+            response = requests.post(f'{BASE_URL}{url}', headers=headers, json=data, timeout=10)
             response.raise_for_status()
             rsp = response.json()
 
-            # 如果返回的 code 不是 200，检查是否是 token 失效
-            if rsp.get('code') != 200:
-                error_msg = rsp.get('msg', '未知错误')
-                if 'token失效' in error_msg and retry_count < self.max_retries:
-                    logger.info('Token失效，正在重新登录...')
-                    self.login()  # 重新登录以更新 token
-                    headers['authorization'] = self.config_manager.get_user_info('token')  # 更新 token
-                    return self._post_request(url, headers, data, msg, retry_count + 1)  # 递归重试请求
-                else:
-                    raise ValueError(error_msg)
+            if rsp.get('code') == 200:
+                return rsp
 
-            return rsp
+            error_msg = rsp.get('msg', '未知错误')
+            if 'token失效' in error_msg and retry_count < self.max_retries:
+                wait_time = 0.3 * (2 ** retry_count)
+                logger.warning(f"Token失效: 重试 {retry_count + 1}/{self.max_retries}，等待 {wait_time:.2f} 秒")
+                time.sleep(wait_time)
+                logger.warning('Token失效，正在重新登录...')
+                self.login()
+                headers['authorization'] = self.config_manager.get_user_info('token')
+                return self._post_request(url, headers, data, msg, retry_count + 1)
+            else:
+                raise ValueError(error_msg)
 
-        except requests.RequestException as e:
-            logger.error(f'{msg}: {e}')
-            raise ValueError(f'{msg}: {str(e)}')
+        except (requests.RequestException, ValueError) as e:
+            if retry_count >= self.max_retries:
+                logger.error(f'{msg}: {e}')
+                raise ValueError(f'{msg}: {str(e)}')
+
+            wait_time = 0.3 * (2 ** retry_count)
+            logger.warning(f"{msg}: 重试 {retry_count + 1}/{self.max_retries}，等待 {wait_time:.2f} 秒")
+            time.sleep(wait_time)
+
+        return self._post_request(url, headers, data, msg, retry_count + 1)
 
     def login(self):
         """

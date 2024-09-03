@@ -1,6 +1,7 @@
 import logging
-import requests
+import time
 from typing import Callable, Dict, Optional
+import requests
 
 logging.basicConfig(format='[%(asctime)s] %(name)s %(levelname)s: %(message)s',
                     level=logging.INFO,
@@ -84,16 +85,29 @@ class MessagePusher:
             url: str,
             data: Optional[dict] = None,
             json: Optional[dict] = None,
-            service: str = "Service"
+            service: str = "Service",
+            max_retries: int = 3,
+            initial_delay: float = 0.5
     ) -> None:
-        """发送HTTP请求并处理响应。"""
-        try:
-            response = requests.post(url=url, data=data, json=json, timeout=10)
-            response.raise_for_status()
-            result = response.json()
-            if result.get("code") == 200 or result.get("code") == 0:
-                logger.info(f"{service}消息推送成功")
-            else:
-                logger.warning(f"{service}消息推送失败：{result.get('msg')}")
-        except requests.RequestException as e:
-            logger.error(f"{service}请求失败：{str(e)}")
+        """发送HTTP请求并处理响应，包含重试机制。"""
+        retries = 0
+        while retries <= max_retries:
+            try:
+                response = requests.post(url=url, data=data, json=json, timeout=10)
+                response.raise_for_status()
+                result = response.json()
+                if result.get("code") == 200 or result.get("code") == 0:
+                    logger.info(f"{service}消息推送成功")
+                    return  # 成功时直接返回
+                else:
+                    logger.warning(f"{service}消息推送失败：{result.get('msg')}")
+                    # 推送失败但服务器正常响应，不进行重试
+                    return
+            except requests.RequestException as e:
+                retries += 1
+                if retries > max_retries:
+                    logger.error(f"{service}请求失败，已达到最大重试次数：{str(e)}")
+                    return
+                wait_time = initial_delay * (2 ** retries)
+                logger.warning(f"{service}请求失败，正在进行第 {retries} 次重试，等待时间：{wait_time:.2f}秒")
+                time.sleep(wait_time)
