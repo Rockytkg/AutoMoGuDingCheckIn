@@ -16,7 +16,9 @@ class MessagePusher:
         初始化MessagePusher实例。
 
         :param token: 用于消息推送的认证Token。
+        :type token: str
         :param push_type: 消息推送的类型，默认为"server"。
+        :type push_type: str
         """
         self.token = token
         self.push_type = push_type.lower()
@@ -31,7 +33,9 @@ class MessagePusher:
         统一消息推送方法，根据初始化时指定的push_type调用对应的推送接口。
 
         :param title: 消息的标题。
+        :type title: str
         :param content: 消息的内容。
+        :type content: str
         """
         try:
             push_function = self.push_functions.get(self.push_type)
@@ -52,7 +56,14 @@ class MessagePusher:
         self._send_request(url=url, json=params, service="Server酱")
 
     def _push_pushplus(self, title: str, content: str) -> None:
-        """使用PushPlus推送消息。"""
+        """
+        使用PushPlus推送消息。
+
+        :param title: 消息的标题。
+        :type title: str
+        :param content: 消息的内容。
+        :type content: str
+        """
         url = "https://www.pushplus.plus/send"
         params = {
             "token": self.token,
@@ -63,7 +74,14 @@ class MessagePusher:
         self._send_request(url=url, json=params, service="PushPlus")
 
     def _push_anpush(self, title: str, content: str) -> None:
-        """使用AnPush推送消息。"""
+        """
+        使用AnPush推送消息。
+
+        :param title: 消息的标题。
+        :type title: str
+        :param content: 消息的内容。
+        :type content: str
+        """
         if not self.token:
             raise ValueError("Token 不能为空")
 
@@ -89,7 +107,22 @@ class MessagePusher:
             max_retries: int = 3,
             initial_delay: float = 0.5
     ) -> None:
-        """发送HTTP请求并处理响应，包含重试机制。"""
+        """
+        发送HTTP请求并处理响应，包含重试机制。
+
+        :param url: 请求的URL。
+        :type url: str
+        :param data: 请求的数据。
+        :type data: dict
+        :param json: 请求的JSON数据。
+        :type json: dict
+        :param service: 服务名称。
+        :type service: str
+        :param max_retries: 最大重试次数。
+        :type max_retries: int
+        :param initial_delay: 初始等待时间。
+        :type initial_delay: float
+        """
         retries = 0
         while retries <= max_retries:
             try:

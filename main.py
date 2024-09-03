@@ -21,7 +21,13 @@ USER_DIR = os.path.join(os.path.dirname(__file__), "user")
 
 
 def get_api_client(config: ConfigManager) -> ApiClient:
-    """获取配置好的ApiClient实例。"""
+    """获取配置好的ApiClient实例。
+
+    :param config: 配置管理器。
+    :type config: ConfigManager
+    :return: ApiClient实例。
+    :rtype: ApiClient
+    """
     api_client = ApiClient(config)
     if not config.get_user_info('token'):
         api_client.login()
@@ -33,7 +39,17 @@ def get_api_client(config: ConfigManager) -> ApiClient:
 
 
 def upload_img(api_client: ApiClient, config: ConfigManager, count: int) -> str:
-    """上传指定数量的图片"""
+    """上传指定数量的图片
+
+    :param api_client: ApiClient实例。
+    :type api_client: ApiClient
+    :param config: 配置管理器。
+    :type config: ConfigManager
+    :param count: 需要上传的图片数量。
+    :type count: int
+    :return: 上传成功的图片链接
+    :rtype: str
+    """
     # 检查数量是否大于0
     if count <= 0:
         return ""
@@ -56,7 +72,15 @@ def upload_img(api_client: ApiClient, config: ConfigManager, count: int) -> str:
 
 
 def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, Any]:
-    """执行打卡操作"""
+    """执行打卡操作
+
+    :param api_client: ApiClient实例。
+    :type api_client: ApiClient
+    :param config: 配置管理器。
+    :type config: ConfigManager
+    :return: 执行结果
+    :rtype: Dict[str, Any]
+    """
     try:
         current_time = datetime.now()
         current_hour = current_time.hour
@@ -123,7 +147,15 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
 
 
 def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[str, Any]:
-    """提交日报"""
+    """提交日报
+
+    :param api_client: ApiClient实例。
+    :type api_client: ApiClient
+    :param config: 配置管理器。
+    :type config: ConfigManager
+    :return: 执行结果
+    :rtype: Dict[str, Any]
+    """
     if not config.get_config("isSubmittedDaily"):
         logger.info("用户未开启日报提交功能，跳过日报提交任务")
         return {
@@ -197,7 +229,15 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
 
 
 def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[str, Any]:
-    """提交周报"""
+    """提交周报
+
+    :param config: 配置管理器。
+    :type config: ConfigManager
+    :param api_client: ApiClient实例。
+    :type api_client: ApiClient
+    :return: 执行结果
+    :rtype: Dict[str, Any]
+    """
     if not config.get_config("isSubmittedWeekly"):
         logger.info("用户未开启周报提交功能，跳过周报提交任务")
         return {
@@ -283,7 +323,15 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
 
 
 def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[str, Any]:
-    """提交月报"""
+    """提交月报
+
+    :param config: 配置管理器。
+    :type config: ConfigManager
+    :param api_client: ApiClient实例。
+    :type api_client: ApiClient
+    :return: 执行结果
+    :rtype: Dict[str, Any]
+    """
     if not config.get_config("isSubmittedMonthlyReport"):
         logger.info("用户未开启月报提交功能，跳过月报提交任务")
         return {
@@ -363,7 +411,13 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
 
 
 def generate_markdown_message(results: List[Dict[str, Any]]) -> str:
-    """生成 Markdown 格式的消息"""
+    """生成 Markdown 格式的消息
+
+    :param results: 任务执行结果列表
+    :type results: List[Dict[str, Any]]
+    :return: Markdown 格式的消息
+    :rtype: str
+    """
     message = "# 工学云任务执行报告\n\n"
 
     # 任务执行统计
@@ -418,7 +472,15 @@ def generate_markdown_message(results: List[Dict[str, Any]]) -> str:
 
 
 def push_notification(config: ConfigManager, results: List[Dict[str, Any]], message: str) -> None:
-    """发送推送消息"""
+    """发送推送消息
+
+    :param config: 配置管理器
+    :type config: ConfigManager
+    :param results: 任务执行结果列表
+    :type results: List[Dict[str, Any]]
+    :param message: 消息内容
+    :type message: str
+    """
     push_key = config.get_config('pushKey')
     push_type = config.get_config('pushType')
 
@@ -438,7 +500,11 @@ def push_notification(config: ConfigManager, results: List[Dict[str, Any]], mess
 
 
 def run(config: ConfigManager) -> None:
-    """执行所有任务"""
+    """执行所有任务
+
+    :param config: 配置管理器
+    :type config: ConfigManager
+    """
     results: List[Dict[str, Any]] = []
 
     try:
@@ -480,7 +546,11 @@ def run(config: ConfigManager) -> None:
 
 
 def main(selected_files: list = None) -> None:
-    """程序主入口"""
+    """程序主入口
+
+    :param selected_files: 选定的配置文件名（不带路径和后缀）
+    :type selected_files: list
+    """
     logger.info("工学云任务开始")
 
     json_files = {f[:-5]: f for f in os.listdir(USER_DIR) if f.endswith('.json')}  # 创建一个字典，以便快速查找
@@ -502,8 +572,10 @@ def main(selected_files: list = None) -> None:
 
 
 if __name__ == '__main__':
+    # 读取命令行参数
     parser = argparse.ArgumentParser(description="运行工学云任务")
     parser.add_argument('--file', type=str, nargs='+', help='指定要执行的配置文件名（不带路径和后缀），可以一次性指定多个')
     args = parser.parse_args()
 
+    # 执行命令
     main(args.file)

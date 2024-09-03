@@ -3,11 +3,13 @@ import logging
 import os
 import tempfile
 import time
+from typing import Dict, Any, List, Optional
 
 import requests
 from requests.exceptions import RequestException
 from PIL import Image
 
+from util.Config import ConfigManager
 from util.Tool import create_sign, aes_encrypt, aes_decrypt, get_current_month_info
 
 # 常量
@@ -47,7 +49,14 @@ class ApiClient:
         self.config_manager = config_manager
         self.max_retries = 3  # 控制重新尝试的次数
 
-    def _post_request(self, url, headers, data, msg='请求失败', retry_count=0):
+    def _post_request(
+            self,
+            url: str,
+            headers: Dict[str, str],
+            data: Dict[str, Any],
+            msg: str = '请求失败',
+            retry_count: int = 0
+    ) -> Dict[str, Any]:
         """
         发送POST请求，并处理请求过程中可能发生的错误。
         包括自动重试机制和Token失效处理。
@@ -99,7 +108,7 @@ class ApiClient:
 
         return self._post_request(url, headers, data, msg, retry_count + 1)
 
-    def login(self):
+    def login(self) -> None:
         """
         执行用户登录操作，获取新的用户信息并更新配置。
 
@@ -122,7 +131,7 @@ class ApiClient:
         user_info = json.loads(aes_decrypt(rsp.get('data', '')))
         self.config_manager.update_config('userInfo', user_info)
 
-    def fetch_internship_plan(self):
+    def fetch_internship_plan(self) -> None:
         """
         获取当前用户的实习计划并更新配置中的planInfo。
 
@@ -145,7 +154,7 @@ class ApiClient:
         plan_info = rsp.get('data', [{}])[0]
         self.config_manager.update_config('planInfo', plan_info)
 
-    def get_job_info(self):
+    def get_job_info(self) -> Dict[str, Any]:
         """
         获取用户的工作id。
 
@@ -165,7 +174,7 @@ class ApiClient:
         rsp = self._post_request(url, headers, data, '获取岗位信息失败')
         return rsp.get('data', {})
 
-    def get_submitted_reports_info(self, report_type):
+    def get_submitted_reports_info(self, report_type: str) -> Dict[str, Any]:
         """
         获取已经提交的日报、周报或月报的数量。
 
@@ -191,10 +200,9 @@ class ApiClient:
             ]
         )
         rsp = self._post_request(url, headers, data, '获取报告列表失败')
-
         return rsp
 
-    def submit_report(self, report_info):
+    def submit_report(self, report_info: Dict[str, Any]) -> None:
         """
         提交报告。
 
@@ -270,7 +278,7 @@ class ApiClient:
         }
         self._post_request(url, headers, data, report_info.get('msg'))
 
-    def get_weeks_date(self):
+    def get_weeks_date(self) -> Dict[str, Any]:
         """
         获取本周周报周期信息
 
@@ -285,7 +293,7 @@ class ApiClient:
         rsp = self._post_request(url, headers, data, '获取周报周期失败')
         return rsp.get('data', [])[0]
 
-    def get_checkin_info(self):
+    def get_checkin_info(self) -> Dict[str, Any]:
         """
         获取用户的打卡信息。
 
@@ -306,7 +314,7 @@ class ApiClient:
         # 每月第一天的第一次打卡返回的是空，所以特殊处理返回空字典
         return rsp.get('data', [{}])[0] if rsp.get('data') else {}
 
-    def submit_clock_in(self, checkin_info):
+    def submit_clock_in(self, checkin_info: Dict[str, Any]) -> None:
         """
         提交打卡信息。
 
@@ -382,7 +390,7 @@ class ApiClient:
 
         self._post_request(url, headers, data, '打卡失败')
 
-    def get_upload_token(self):
+    def get_upload_token(self) -> str:
         """
         获取上传文件的认证令牌。
 
@@ -399,7 +407,10 @@ class ApiClient:
         rsp = self._post_request(url, headers, data, '获取上传文件的认证令牌失败')
         return rsp.get('data', '')
 
-    def _get_authenticated_headers(self, sign_data=None):
+    def _get_authenticated_headers(
+            self,
+            sign_data: Optional[List[str]] = None
+    ) -> Dict[str, str]:
         """
         生成带有认证信息的请求头。
 
@@ -423,7 +434,32 @@ class ApiClient:
         return headers
 
 
-def generate_article(config, tittle, job_info, count=500, max_retries=3, retry_delay=1):
+def generate_article(
+        config: ConfigManager,
+        title: str,
+        job_info: Dict[str, Any],
+        count: int = 500,
+        max_retries: int = 3,
+        retry_delay: int = 1
+) -> str:
+    """
+    生成日报、周报、月报
+
+    :param config: 配置
+    :type config: ConfigManager
+    :param title: 标题
+    :type title: str
+    :param job_info: 工作信息
+    :type job_info: dict
+    :param count: 文章字数
+    :type count: int
+    :param max_retries: 最大重试次数
+    :type max_retries: int
+    :param retry_delay: 重试延迟（秒）
+    :type retry_delay: int
+    :return: 文章内容
+    :rtype: str
+    """
     headers = {
         'Authorization': f"Bearer {config.get_config('apikey')}",
     }
@@ -436,7 +472,7 @@ def generate_article(config, tittle, job_info, count=500, max_retries=3, retry_d
             {"role": "system",
              "content": "模板：实习地点：xxxx\n\n工作内容：\n\nxzzzx\n\n工作总结：\n\nxxxxxx\n\n遇到问题：\n\nxzzzx\n\n自我评价：\n\nxxxxxx"},
             {"role": "user",
-             "content": f"{tittle},工作地点:{job_info['jobAddress']};公司名:{job_info['practiceCompanyEntity']['companyName']};"
+             "content": f"{title},工作地点:{job_info['jobAddress']};公司名:{job_info['practiceCompanyEntity']['companyName']};"
                         f"岗位职责:{job_info['quartersIntroduce']};公司所属行业:{job_info['practiceCompanyEntity']['tradeValue']}"}
         ]
     }
@@ -464,7 +500,13 @@ def generate_article(config, tittle, job_info, count=500, max_retries=3, retry_d
             raise ValueError(f"发生意外错误: {str(e)}")
 
 
-def upload(token, images, config, max_retries=3, retry_delay=1):
+def upload(
+        token: str,
+        images: List[str],
+        config: ConfigManager,
+        max_retries: int = 3,
+        retry_delay: int = 1
+) -> str:
     """
     上传图片（支持一次性上传多张图片）
 
@@ -478,7 +520,7 @@ def upload(token, images, config, max_retries=3, retry_delay=1):
     :type max_retries: int
     :param retry_delay: 重试延迟（秒）
     :type retry_delay: int
-    :return: 成功上传的图片key，用逗号分隔
+    :return: 成功上传的图片链接，用逗号分隔
     :rtype: str
     """
     url = 'https://up.qiniup.com/'
