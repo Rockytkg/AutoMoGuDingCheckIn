@@ -39,7 +39,7 @@ class ApiClient:
         max_retries (int): 控制请求失败后重新尝试的次数，默认值为1。
     """
 
-    def __init__(self, config_manager):
+    def __init__(self, config_manager: ConfigManager):
         """
         初始化ApiClient实例。
 
