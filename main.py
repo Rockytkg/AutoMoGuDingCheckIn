@@ -542,7 +542,7 @@ def run(config: ConfigManager) -> None:
 
     message = generate_markdown_message(results)
     push_notification(config, results, message)
-    logger.info(f"执行结束：{config.get_user_info('nikeName')}\n")
+    logger.info(f"执行结束：{config.get_user_info('nikeName')}")
 
 
 def main(selected_files: list = None) -> None:

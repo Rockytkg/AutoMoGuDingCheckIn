@@ -47,7 +47,7 @@ class ApiClient:
         :type config_manager: ConfigManager
         """
         self.config_manager = config_manager
-        self.max_retries = 3  # 控制重新尝试的次数
+        self.max_retries = 5  # 控制重新尝试的次数
 
     def _post_request(
             self,
@@ -88,7 +88,6 @@ class ApiClient:
             error_msg = rsp.get('msg', '未知错误')
             if 'token失效' in error_msg and retry_count < self.max_retries:
                 wait_time = 0.3 * (2 ** retry_count)
-                logger.warning(f"Token失效: 重试 {retry_count + 1}/{self.max_retries}，等待 {wait_time:.2f} 秒")
                 time.sleep(wait_time)
                 logger.warning('Token失效，正在重新登录...')
                 self.login()
@@ -99,8 +98,7 @@ class ApiClient:
 
         except (requests.RequestException, ValueError) as e:
             if retry_count >= self.max_retries:
-                logger.error(f'{msg}: {e}')
-                raise ValueError(f'{msg}: {str(e)}')
+                raise ValueError(f'{msg}，{str(e)}')
 
             wait_time = 0.3 * (2 ** retry_count)
             logger.warning(f"{msg}: 重试 {retry_count + 1}/{self.max_retries}，等待 {wait_time:.2f} 秒")
@@ -568,7 +566,6 @@ def upload(
 
                         # 检查响应中是否包含key字段
                         response_data = response.json()
-                        print(response_data)
                         if 'key' in response_data:
                             successful_keys.append(response_data['key'])
                         else:
