@@ -567,7 +567,7 @@ def upload(
                         # 检查响应中是否包含key字段
                         response_data = response.json()
                         if 'key' in response_data:
-                            successful_keys.append(response_data['key'])
+                            successful_keys.append(response_data['key'].replace("upload/", ""))
                         else:
                             logging.warning(f"上传成功但响应中没有key字段: {image_path}")
 
