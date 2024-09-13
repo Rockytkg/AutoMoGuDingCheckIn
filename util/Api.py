@@ -97,7 +97,7 @@ class ApiClient:
                 raise ValueError(error_msg)
 
         except (requests.RequestException, ValueError) as e:
-            if retry_count >= self.max_retries:
+            if '账号不存在或密码错误！' in str(e) or retry_count >= self.max_retries:
                 raise ValueError(f'{msg}，{str(e)}')
 
             wait_time = 0.3 * (2 ** retry_count)
