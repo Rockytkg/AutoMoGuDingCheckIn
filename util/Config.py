@@ -62,22 +62,15 @@ class ConfigManager:
         """
         config_data = self.config.get('config', {})
 
-        # 检查是否启用日报、周报或月报
-        is_daily = config_data.get('isSubmittedDaily', False)
+        # 检查是否启用周报或月报
         is_weekly = config_data.get('isSubmittedWeekly', False)
         is_monthly = config_data.get('isSubmittedMonthlyReport', False)
 
         # 如果任意一种提交方式被启用，检查必填字段
-        if is_daily or is_weekly or is_monthly:
-            for field in self.required_fields:
-                if field not in config_data:
-                    logger.error(f"配置错误：'{field}' 为必填项")
-                    raise ValueError(f"配置错误：'{field}' 为必填项")
-
-        # 检查日报和周报的提交时间
-        if is_daily and 'submitDailyTime' not in config_data:
-            logger.error("配置错误：启用了日报提交，但缺少 'submitDailyTime' 字段。请在配置中添加该字段。")
-            raise ValueError("配置错误：启用了日报提交，但缺少 'submitDailyTime' 字段。请在配置中添加该字段。")
+        for field in self.required_fields:
+            if field not in config_data:
+                logger.error(f"配置错误：'{field}' 为必填项")
+                raise ValueError(f"配置错误：'{field}' 为必填项")
 
         if is_weekly and 'submitWeeklyTime' not in config_data:
             logger.error("配置错误：启用了周报提交，但缺少 'submitWeeklyTime' 字段。请在配置中添加该字段。")

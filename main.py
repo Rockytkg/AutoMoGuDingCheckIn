@@ -342,7 +342,7 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
 
     current_time = datetime.now()
     last_day_of_month = (current_time.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-    submit_day = int(config.get_config("submit_monthly_time"))
+    submit_day = int(config.get_config("submitMonthlyReportTime"))
 
     if current_time.day != min(submit_day, last_day_of_month.day) or current_time.hour < 12:
         logger.info("未到月报提交时间（需指定日期12点后）")
