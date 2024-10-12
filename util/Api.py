@@ -357,7 +357,7 @@ class ApiClient:
             "planId": self.config_manager.get_plan_info('planId'),
             "attendanceType": None,
             "username": None,
-            "attachments": None,
+            "attachments": checkin_info.get('attachments', None),
             "userId": self.config_manager.get_user_info('userId'),
             "isSYN": None,
             "studentId": None,

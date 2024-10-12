@@ -58,6 +58,7 @@ AutoMoGuDingCheckIn 旨在：
 | `city`                     | 打卡的城市                                                                | `"成都市"`                                                                                                                    |
 | `area`                     | 打卡的县/区                                                               | `"高新区"`                                                                                                                    |
 | `device`                   | 设备信息（[用这个小工具获取](https://www.123pan.com/s/rlqcVv-bQOPH.html)          | `"{brand: OnePlus PHP310, systemVersion: 13, Platform: Android, isPhysicalDevice: true, incremental: T.18b78b-be23-ce7d}"` |
+| `clockInImageCount`        | 打卡时候需要提交图片的数量，默认0                                                    | `0`                                                                                                                        |
 | `isSubmittedDaily`         | 是否提交日报                                                               | `false`                                                                                                                    |
 | `dailyReportImageCount`    | 日报提交图片数量（默认不提交，不为0会从img目录随机抽取）                                       | `0`                                                                                                                        |
 | `isSubmittedWeekly`        | 是否提交周报                                                               | `true`                                                                                                                     |
@@ -85,6 +86,7 @@ AutoMoGuDingCheckIn 旨在：
     "province": "四川省",
     "city": "成都市",
     "area": "高新区",
+    "clockInImageCount": 0,
     "isSubmittedDaily": false,
     "dailyReportImageCount": 0,
     "isSubmittedWeekly": true,
@@ -96,9 +98,9 @@ AutoMoGuDingCheckIn 旨在：
     "model": "gpt-4o-mini",
     "apikey": "sk-osdhgosdipghpsdgjiosfvinoips",
     "apiUrl": "https://api.openai.com/",
-    "pushType": "server",
-    "pushKey": "SCT254983TtCALtMB********FDASqNC3t",
-    "device": "{brand: OnePlus PHP310, systemVersion: 13, Platform: Android, isPhysicalDevice: true, incremental: T.18b78b-be23-ce7d}"
+    "pushType": null,
+    "pushKey": null,
+    "device": "{brand: OnePlus PHP110, systemVersion: 14, Platform: Android, isPhysicalDevice: true, incremental: T.1as885b-be80-be7f}"
   }
 }
 ```
