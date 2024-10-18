@@ -122,7 +122,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
         checkin_info = {
             'type': checkin_type,
             'lastDetailAddress': last_checkin_info.get('address'),
-            'attachments': attachments,
+            'attachments': attachments or None
         }
 
         api_client.submit_clock_in(checkin_info)
