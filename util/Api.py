@@ -3,6 +3,8 @@ import logging
 import os
 import tempfile
 import time
+import uuid
+import random
 from typing import Dict, Any, List, Optional
 
 import requests
@@ -10,7 +12,7 @@ from requests.exceptions import RequestException
 from PIL import Image
 
 from util.Config import ConfigManager
-from util.Tool import create_sign, aes_encrypt, aes_decrypt, get_current_month_info
+from util.Tool import create_sign, aes_encrypt, aes_decrypt, get_current_month_info, recognize_captcha
 
 # 常量
 BASE_URL = 'https://api.moguding.net:9000/'
@@ -82,7 +84,7 @@ class ApiClient:
             response.raise_for_status()
             rsp = response.json()
 
-            if rsp.get('code') == 200:
+            if rsp.get('code') == 200 or rsp.get('code') == 6111:
                 return rsp
 
             error_msg = rsp.get('msg', '未知错误')
@@ -106,6 +108,47 @@ class ApiClient:
 
         return self._post_request(url, headers, data, msg, retry_count + 1)
 
+    def pass_captcha(self, max_attempts: Optional[int] = 5) -> str:
+        """
+        通过行为验证码（验证码类型为blockPuzzle）
+
+        :param max_attempts: 最大尝试次数，默认为5次
+        :type max_attempts: Optional[int]
+        :return: 验证参数
+        :rtype: str
+        :raises Exception: 当达到最大尝试次数时抛出异常
+        """
+        attempts = 0
+        while attempts < max_attempts:
+            time.sleep(random.uniform(0.5, 0.7))
+            captcha_url = '/session/captcha/v1/get'
+            request_data = {
+                "clientUid": str(uuid.uuid4()).replace('-', ''),
+                "captchaType": "blockPuzzle"
+            }
+            captcha_info = self._post_request(captcha_url, HEADERS, request_data, '获取验证码失败')
+            slider_data = recognize_captcha(captcha_info['data']['jigsawImageBase64'],
+                                            captcha_info['data']['originalImageBase64'])
+            check_slider_url = '/session/captcha/v1/check'
+            check_slider_data = {
+                "pointJson": aes_encrypt(
+                    slider_data,
+                    captcha_info['data']['secretKey'],
+                    'b64'
+                ),
+                "token": captcha_info['data']['token'],
+                "captchaType": "blockPuzzle"
+            }
+            check_result = self._post_request(check_slider_url, HEADERS, check_slider_data, '验证验证码失败')
+            if check_result.get('code') != 6111:
+                return aes_encrypt(
+                    captcha_info['data']['token'] + '---' + slider_data,
+                    captcha_info['data']['secretKey'],
+                    'b64'
+                )
+            attempts += 1
+        raise Exception("验证码验证失败超过最大尝试次数")
+
     def login(self) -> None:
         """
         执行用户登录操作，获取新的用户信息并更新配置。
@@ -114,15 +157,15 @@ class ApiClient:
 
         :raises ValueError: 如果登录请求失败，抛出包含详细错误信息的异常。
         """
-        url = 'session/user/v5/login'
+        url = 'session/user/v6/login'
         data = {
             'phone': aes_encrypt(self.config_manager.get_config('phone')),
             'password': aes_encrypt(self.config_manager.get_config('password')),
-            'captcha': None,
+            'captcha': self.pass_captcha(),
             'loginType': 'android',
-            'uuid': '',
+            'uuid': str(uuid.uuid4()).replace('-', ''),
             'device': 'android',
-            'version': '5.14.0',
+            'version': '5.15.0',
             't': aes_encrypt(str(int(time.time() * 1000)))
         }
         rsp = self._post_request(url, HEADERS, data, '登陆失败')
