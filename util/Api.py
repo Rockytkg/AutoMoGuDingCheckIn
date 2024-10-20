@@ -121,7 +121,7 @@ class ApiClient:
         attempts = 0
         while attempts < max_attempts:
             time.sleep(random.uniform(0.5, 0.7))
-            captcha_url = '/session/captcha/v1/get'
+            captcha_url = 'session/captcha/v1/get'
             request_data = {
                 "clientUid": str(uuid.uuid4()).replace('-', ''),
                 "captchaType": "blockPuzzle"
@@ -129,7 +129,7 @@ class ApiClient:
             captcha_info = self._post_request(captcha_url, HEADERS, request_data, '获取验证码失败')
             slider_data = recognize_captcha(captcha_info['data']['jigsawImageBase64'],
                                             captcha_info['data']['originalImageBase64'])
-            check_slider_url = '/session/captcha/v1/check'
+            check_slider_url = 'session/captcha/v1/check'
             check_slider_data = {
                 "pointJson": aes_encrypt(
                     slider_data,
