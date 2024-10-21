@@ -6,7 +6,8 @@ import base64
 from hashlib import md5
 from datetime import datetime, timedelta
 
-import ddddocr
+import cv2
+import numpy as np
 from aes_pkcs5.algorithms.aes_ecb_pkcs5_padding import AESECBPKCS5Padding
 
 logging.basicConfig(
@@ -170,9 +171,39 @@ def recognize_captcha(target: str, background: str) -> str:
     """
     target_bytes = base64.b64decode(target)
     background_bytes = base64.b64decode(background)
-    slide = ddddocr.DdddOcr(det=False, ocr=False, show_ad=False)
-    res = slide.slide_match(target_bytes=target_bytes, background_bytes=background_bytes, simple_target=True)
+    res = slide_match(target_bytes=target_bytes, background_bytes=background_bytes)
     target_width = extract_png_width(target_bytes)
-    slider_distance = calculate_precise_slider_distance(res['target'][0], res['target'][2], target_width)
+    slider_distance = calculate_precise_slider_distance(res[0], res[1], target_width)
     slider_data = {"x": slider_distance, "y": 5}
     return json.dumps(slider_data, separators=(',', ':'))
+
+def slide_match(target_bytes: bytes = None, background_bytes: bytes = None) -> list:
+    """获取验证区域坐标
+
+    使用目标检测算法
+
+    :param target_bytes: 滑块图片二进制数据
+    :type target_bytes: bytes
+    :param background_bytes: 背景图片二进制数据
+    :type background_bytes: bytes
+
+    :return: 目标区域左边界坐标，右边界坐标
+    :rtype: list
+
+    :raises ValueError: 如果解密失败，抛出包含详细错误信息的异常。
+    """
+    target = cv2.imdecode(np.frombuffer(target_bytes, np.uint8), cv2.IMREAD_ANYCOLOR)
+    
+    background = cv2.imdecode(np.frombuffer(background_bytes, np.uint8), cv2.IMREAD_ANYCOLOR)
+
+    background = cv2.Canny(background, 100, 200)
+    target = cv2.Canny(target, 100, 200)
+
+    background = cv2.cvtColor(background, cv2.COLOR_GRAY2RGB)
+    target = cv2.cvtColor(target, cv2.COLOR_GRAY2RGB)
+
+    res = cv2.matchTemplate(background, target, cv2.TM_CCOEFF_NORMED)
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+    h, w = target.shape[:2]
+    bottom_right = (max_loc[0] + w, max_loc[1] + h)
+    return [int(max_loc[0]),int(bottom_right[0])]
