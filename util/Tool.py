@@ -177,6 +177,7 @@ def recognize_captcha(target: str, background: str) -> str:
     slider_data = {"x": slider_distance, "y": 5}
     return json.dumps(slider_data, separators=(',', ':'))
 
+
 def slide_match(target_bytes: bytes = None, background_bytes: bytes = None) -> list:
     """获取验证区域坐标
 
@@ -189,8 +190,6 @@ def slide_match(target_bytes: bytes = None, background_bytes: bytes = None) -> l
 
     :return: 目标区域左边界坐标，右边界坐标
     :rtype: list
-
-    :raises ValueError: 如果解密失败，抛出包含详细错误信息的异常。
     """
     target = cv2.imdecode(np.frombuffer(target_bytes, np.uint8), cv2.IMREAD_ANYCOLOR)
     
