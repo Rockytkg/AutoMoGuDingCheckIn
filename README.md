@@ -133,5 +133,4 @@ python main.py
 如有任何疑问或需要支持，请通过提交 [issue](https://github.com/Rockytkg/AutoMoGuDingCheckIn/issues) 与我们联系。
 
 ## start
-
-[![Stargazers over time](https://starchart.cc/Rockytkg/AutoMoGuDingCheckIn)](https://starchart.cc/Rockytkg/AutoMoGuDingCheckIn)
+[![Stargazers over time](https://starchart.cc/Rockytkg/AutoMoGuDingCheckIn.svg?variant=adaptive)](https://starchart.cc/Rockytkg/AutoMoGuDingCheckIn)
