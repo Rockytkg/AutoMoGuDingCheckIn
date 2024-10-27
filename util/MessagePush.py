@@ -3,10 +3,11 @@ import time
 from typing import Callable, Dict, Optional
 import requests
 
-logging.basicConfig(format='[%(asctime)s] %(name)s %(levelname)s: %(message)s',
-                    level=logging.INFO,
-                    datefmt='%Y-%m-%d %I:%M:%S'
-                    )
+logging.basicConfig(
+    format='[%(asctime)s] %(name)s %(levelname)s: %(message)s',
+    level=logging.INFO,
+    datefmt='%Y-%m-%d %I:%M:%S'
+)
 logger = logging.getLogger('MessagePush')
 
 

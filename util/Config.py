@@ -1,138 +1,101 @@
+import json
 import logging
 import random
-import json
 from typing import Any, Dict
-
-logging.basicConfig(
-    format="[%(asctime)s] %(name)s %(levelname)s: %(message)s",
-    level=logging.INFO,
-    datefmt="%Y-%m-%d %I:%M:%S"
-)
-logger = logging.getLogger("UserConfig")
+from pathlib import Path
 
 
 class ConfigManager:
-    """管理配置文件的加载、验证和更新。
-
-    Attributes:
-        path (str): 配置文件路径。
-        config (dict): 加载的配置字典。
-        required_fields (list): 配置文件中必需的字段。
-    """
-
-    required_fields = [
-        'password', 'phone', 'address', 'latitude', 'longitude', 'province', 'city', 'area', 'device'
-    ]
+    """管理配置文件的加载、验证和更新。"""
 
     def __init__(self, path: str):
-        """初始化ConfigManager实例并加载配置文件。
+        """
+        初始化ConfigManager实例并加载配置文件。
 
         :param path: 配置文件的路径。
-        :type path: str
         """
-        self.path = path
-        self.config = self._load_config()
-        self._validate_config()
+        self._path = Path(path)
+        self._logger = logging.getLogger(__name__)
+        self._config = self._load_config()
 
     def _load_config(self) -> Dict[str, Any]:
-        """加载配置文件。
+        """
+        加载配置文件并修改经纬度。
 
         :return: 加载的配置字典。
-        :rtype: dict
-
         :raises FileNotFoundError: 如果配置文件未找到。
         :raises json.JSONDecodeError: 如果配置文件格式错误。
         """
         try:
-            with open(self.path, 'r', encoding='utf-8') as jsonfile:
+            with self._path.open('r', encoding='utf-8') as jsonfile:
                 config = json.load(jsonfile)
-            logger.info(f"配置文件已加载: {self.path}")
+
+            # 为经纬度添加随机偏移
+            location = config.get('config', {}).get('clockIn', {}).get('location', {})
+            for coord in ['latitude', 'longitude']:
+                if coord in location and isinstance(location[coord], str) and len(location[coord]) > 1:
+                    location[coord] = location[coord][:-1] + str(random.randint(0, 9))
+
+            self._logger.info(f"配置文件已加载: {self._path}")
             return config
-        except FileNotFoundError:
-            logger.error(f"配置文件未找到: {self.path}")
-            raise
-        except json.JSONDecodeError:
-            logger.error(f"配置文件格式错误: {self.path}")
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            self._logger.error(f"配置文件加载失败: {e}")
             raise
 
-    def _validate_config(self) -> None:
-        """验证配置文件中是否包含所有必需的字段。
-
-        :raises ValueError: 如果配置文件中缺少必需的字段。
+    def get_value(self, *keys: str) -> Any:
         """
-        config_data = self.config.get('config', {})
+        获取配置中的值。
 
-        # 检查是否启用周报或月报
-        is_weekly = config_data.get('isSubmittedWeekly', False)
-        is_monthly = config_data.get('isSubmittedMonthlyReport', False)
-
-        # 如果任意一种提交方式被启用，检查必填字段
-        for field in self.required_fields:
-            if field not in config_data:
-                logger.error(f"配置错误：'{field}' 为必填项")
-                raise ValueError(f"配置错误：'{field}' 为必填项")
-
-        if is_weekly and 'submitWeeklyTime' not in config_data:
-            logger.error("配置错误：启用了周报提交，但缺少 'submitWeeklyTime' 字段。请在配置中添加该字段。")
-            raise ValueError("配置错误：启用了周报提交，但缺少 'submitWeeklyTime' 字段。请在配置中添加该字段。")
-
-        if is_monthly and 'submitMonthlyReportTime' not in config_data:
-            logger.error("配置错误：启用了月报提交，但缺少 'submitMonthlyReportTime' 字段。请在配置中添加该字段。")
-            raise ValueError("配置错误：启用了月报提交，但缺少 'submitMonthlyReportTime' 字段。请在配置中添加该字段。")
-
-    def get_config(self, key: str) -> Any:
-        """获取config字段中的值。
-
-        :param key: 配置的键名。
-        :type key: str
-
-        :return: 配置中的值。如果键名是'latitude'或'longitude'，将随机修改最后一位数字。
-        :rtype: Any
+        :param keys: 配置的键名序列。
+        :return: 配置中的值。如果键不存在，返回None。
         """
-        value = self.config.get('config', {}).get(key, None)
-        if key in ['latitude', 'longitude'] and value is not None:
-            return str(value)[:-1] + str(random.randint(0, 9))
-        return value
+        value = self._config
+        try:
+            for key in keys:
+                # 拆分点（.）符号的键名
+                for sub_key in key.split('.'):
+                    value = value[sub_key]
+            return value
+        except KeyError:
+            self._logger.warning(f"配置键不存在: {'->'.join(keys)}")
+            return None
 
-    def get_plan_info(self, key: str) -> Any:
-        """获取planInfo字段中的值。
-
-        :param key: 配置的键名。
-        :type key: str
-
-        :return: 配置中的值。
-        :rtype: Any
+    def update_config(self, value: Any, *keys: str) -> None:
         """
-        return self.config.get('planInfo', {}).get(key, None)
+        更新配置并保存。
 
-    def get_user_info(self, key: str) -> Any:
-        """获取userInfo字段中的值。
-
-        :param key: 配置的键名。
-        :type key: str
-
-        :return: 配置中的值。
-        :rtype: Any
-        """
-        return self.config.get('userInfo', {}).get(key, None)
-
-    def update_config(self, key: str, value: Any) -> None:
-        """更新config字段中的配置并保存。
-
-        :param key: 配置的键名。
-        :type key: str
         :param value: 配置的新值。
-        :type value: Any
+        :param keys: 配置的键名序列，用点（.）分隔。
         """
-        self.config[key] = value
-        self._save_config()
+        config = self._config
+        try:
+            for key in keys[:-1]:
+                # 使用 setdefault 确保中间的字典存在
+                config = config.setdefault(key, {})
+            # 更新或设置最后一个键名的值
+            config[keys[-1]] = value
+            self._save_config()
+        except Exception as e:
+            self._logger.error(f"更新配置失败: {e}")
+            raise
 
     def _save_config(self) -> None:
-        """保存配置到文件。
-
-        该方法将当前的配置字典保存到指定的配置文件中，确保配置的更新能够持久化。
-
         """
-        with open(self.path, 'w', encoding='utf-8') as jsonfile:
-            json.dump(self.config, jsonfile, ensure_ascii=False, indent=4)
-        logger.info(f"配置文件已更新: {self.path}")
+        保存配置到文件。
+        """
+        try:
+            with self._path.open('w', encoding='utf-8') as jsonfile:
+                json.dump(self._config, jsonfile, ensure_ascii=False, indent=2)
+            self._logger.info(f"配置文件已更新: {self._path}")
+        except Exception as e:
+            self._logger.error(f"保存配置文件失败: {e}")
+            raise
+
+    @property
+    def config(self) -> Dict[str, Any]:
+        """
+        获取配置字典的只读副本。
+
+        :return: 配置字典的副本。
+        """
+        return self._config.copy()
