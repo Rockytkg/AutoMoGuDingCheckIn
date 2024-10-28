@@ -128,7 +128,9 @@ class MessagePusher:
         url = f'https://api.anpush.com/push/{config["token"]}'
         data = {
             "title": title,
-            "content": content
+            "content": content,
+            "channel":config["channel"],
+            "to":config["to"]
         }
 
         try:
@@ -159,7 +161,7 @@ class MessagePusher:
         }
 
         try:
-            rsp = requests.post(url, data=data).json()
+            rsp = requests.post(url, json=data).json()
             if rsp.get("code") == 1000:
                 self._logger.info("WxPusher推送成功")
             else:
