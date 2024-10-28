@@ -5,6 +5,8 @@ from collections import Counter
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.header import Header
+from email.utils import formataddr
 
 import requests
 
@@ -129,8 +131,8 @@ class MessagePusher:
         data = {
             "title": title,
             "content": content,
-            "channel":config["channel"],
-            "to":config["to"]
+            "channel": config["channel"],
+            "to": config["to"]
         }
 
         try:
@@ -180,15 +182,14 @@ class MessagePusher:
         :type content: str
         """
         msg = MIMEMultipart()
-        msg['From'] = f"{config['from']} <{config['username']}>"
-        msg['To'] = config['to']
-        msg['Subject'] = title
+        msg['From'] = formataddr((Header(config['from'], 'utf-8').encode(), config['username']))
+        msg['To'] = Header(config['to'], 'utf-8')
+        msg['Subject'] = Header(title, 'utf-8')
 
         # 添加邮件内容
-        msg.attach(MIMEText(content, 'html', 'utf-8'))  # 使用HTML格式并指定UTF-8编码
+        msg.attach(MIMEText(content, 'html', 'utf-8'))
 
         try:
-            # 使用SSL连接
             with smtplib.SMTP_SSL(config["host"], config["port"]) as server:
                 server.login(config["username"], config["password"])
                 server.send_message(msg)
