@@ -121,22 +121,23 @@ class MessagePusher:
         :param content: 内容
         :type content: str
         """
-        # 创建邮件对象
         msg = MIMEMultipart()
         msg['From'] = f"{config['from']} <{config['username']}>"
         msg['To'] = config['to']
         msg['Subject'] = title
 
         # 添加邮件内容
-        msg.attach(MIMEText(content, 'plain'))
+        msg.attach(MIMEText(content, 'html', 'utf-8'))  # 使用HTML格式并指定UTF-8编码
 
         try:
+            # 使用SSL连接
             with smtplib.SMTP_SSL(config["host"], config["port"]) as server:
                 server.login(config["username"], config["password"])
                 server.send_message(msg)
-                self._logger.info(f"邮件已发送： {config['to']}")
+                self._logger.info(f"邮件已发送至： {config['to']}")
+                server.quit()
         except Exception as e:
-            self._logger.error(f"邮件发送失败： {str(e)}")
+            self._logger.error(f"邮件发送失败：{str(e)}")
 
     @staticmethod
     def _generate_markdown_message(results: List[Dict[str, Any]]) -> str:
