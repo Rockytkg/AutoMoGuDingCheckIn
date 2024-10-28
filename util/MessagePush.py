@@ -211,123 +211,24 @@ class MessagePusher:
         status_counts = Counter(result.get("status", "unknown") for result in results)
         total_tasks = len(results)
 
-        html = f"""
-           <!DOCTYPE html>
-           <html lang="zh-CN">
-           <head>
-               <meta charset="UTF-8">
-               <meta name="viewport" content="width=device-width, initial-scale=1.0">
-               <title>工学云任务执行报告</title>
-               <style>
-                   body {{
-                       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                       line-height: 1.6;
-                       color: #333;
-                       max-width: 800px;
-                       margin: 0 auto;
-                       padding: 20px;
-                       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-                   }}
-                   h1, h2, h3 {{
-                       color: #2c3e50;
-                   }}
-                   h1 {{
-                       text-align: center;
-                       font-size: 2.5em;
-                       margin-bottom: 30px;
-                   }}
-                   .stats {{
-                       display: flex;
-                       justify-content: space-around;
-                       flex-wrap: wrap;
-                       margin-bottom: 30px;
-                   }}
-                   .stat-item {{
-                       background-color: rgba(255, 255, 255, 0.8);
-                       border-radius: 10px;
-                       padding: 15px;
-                       text-align: center;
-                       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                       margin: 10px;
-                       flex: 1;
-                       min-width: 120px;
-                   }}
-                   .task {{
-                       background-color: rgba(255, 255, 255, 0.8);
-                       border-radius: 10px;
-                       padding: 20px;
-                       margin-bottom: 20px;
-                       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                   }}
-                   .task h3 {{
-                       margin-top: 0;
-                   }}
-                   .details {{
-                       background-color: rgba(240, 240, 240, 0.5);
-                       border-radius: 5px;
-                       padding: 10px;
-                       margin-top: 10px;
-                   }}
-                   .report-preview {{
-                       background-color: rgba(240, 240, 240, 0.5);
-                       border-radius: 5px;
-                       padding: 10px;
-                       margin-top: 10px;
-                       font-style: italic;
-                   }}
-                   .full-report {{
-                       display: none;
-                   }}
-                   .show-report:checked + .full-report {{
-                       display: block;
-                   }}
-                   @media (max-width: 600px) {{
-                       .stats {{
-                           flex-direction: column;
-                       }}
-                   }}
-               </style>
-           </head>
-           <body>
-               <h1>工学云任务执行报告</h1>
-
-               <div class="stats">
-                   <div class="stat-item">
-                       <h3>总任务数</h3>
-                       <p>{total_tasks}</p>
-                   </div>
-                   <div class="stat-item">
-                       <h3>成功</h3>
-                       <p>{status_counts['success']}</p>
-                   </div>
-                   <div class="stat-item">
-                       <h3>失败</h3>
-                       <p>{status_counts['fail']}</p>
-                   </div>
-                   <div class="stat-item">
-                       <h3>跳过</h3>
-                       <p>{status_counts['skip']}</p>
-                   </div>
-               </div>
-
-               <h2>详细任务报告</h2>
-           """
+        html = f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>工学云任务执行报告</title><style>*{{margin:0;}}:root{{--bg-color:#f8f9fa;--text-color:#212529;--card-bg:#fff;--card-border:#dee2e6;--success-color:#28a745;--danger-color:#dc3545;--warning-color:#ffc107;--secondary-color:#6c757d}}@media(prefers-color-scheme:dark){{:root{{--bg-color:#343a40;--text-color:#f8f9fa;--card-bg:#495057;--card-border:#6c757d;--success-color:#5cb85c;--danger-color:#d9534f;--warning-color:#f0ad4e;--secondary-color:#a9a9a9}}}}body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;line-height:1.5;color:var(--text-color);background-color:var(--bg-color);margin:0;padding:20px;transition:background-color .3s}}h1,h2,h3{{margin-top:0}}h1{{text-align:center;margin-bottom:30px}}h2{{margin-bottom:20px}}.row{{display:flex;flex-wrap:wrap;margin:0 -15px}}.col{{flex:1;padding:0 15px;min-width:250px}}.card{{background-color:var(--card-bg);border:1px solid var(--card-border);border-radius:5px;padding:20px;margin-bottom:20px;transition:background-color .3s}}.card-title{{margin-top:0}}.text-center{{text-align:center}}.text-success{{color:var(--success-color)}}.text-danger{{color:var(--danger-color)}}.text-warning{{color:var(--warning-color)}}.text-secondary{{color:var(--secondary-color)}}.bg-light{{background-color:rgba(0,0,0,.05);border-radius:5px;padding:10px}}.report-preview{{font-style:italic;margin-top:10px}}.full-report{{display:none}}.show-report:checked+.full-report{{display:block}}pre{{white-space:pre-wrap;word-wrap:break-word;background-color:rgba(0,0,0,.05);padding:10px;border-radius:5px}}@media(max-width:768px){{.row{{flex-direction:column}}}}</style></head><body><div class="container"><h1>工学云任务执行报告</h1><div class="row"><div class="col"><div class="card text-center"><h3 class="card-title">总任务数</h3><p class="card-text" style="font-size:2em">{total_tasks}</p></div></div><div class="col"><div class="card text-center"><h3 class="card-title">成功</h3><p class="card-text text-success" style="font-size:2em">{status_counts['success']}</p></div></div><div class="col"><div class="card text-center"><h3 class="card-title">失败</h3><p class="card-text text-danger" style="font-size:2em">{status_counts['fail']}</p></div></div><div class="col"><div class="card text-center"><h3 class="card-title">跳过</h3><p class="card-text text-warning" style="font-size:2em">{status_counts['skip']}</p></div></div></div><h2>详细任务报告</h2>"""
 
         for result in results:
             task_type = result.get("task_type", "未知任务")
             status = result.get("status", "unknown")
             status_emoji = MessagePusher.STATUS_EMOJIS.get(status, MessagePusher.STATUS_EMOJIS["unknown"])
+            status_class = {
+                "success": "text-success",
+                "fail": "text-danger",
+                "skip": "text-warning",
+                "unknown": "text-secondary"
+            }.get(status, "text-secondary")
 
-            html += f"""
-               <div class="task">
-                   <h3>{status_emoji} {task_type}</h3>
-                   <p><strong>状态：</strong>{status}</p>
-                   <p><strong>结果：</strong>{result.get('message', '无消息')}</p>
-               """
+            html += f"""<div class="card"><h3 class="card-title">{status_emoji} {task_type}</h3><p><strong>状态：</strong><span class="{status_class}">{status}</span></p><p><strong>结果：</strong>{result.get('message', '无消息')}</p>"""
 
             details = result.get("details")
             if status == "success" and isinstance(details, dict):
-                html += '<div class="details">'
+                html += '<div class="bg-light"><h4>详细信息</h4>'
                 for key, value in details.items():
                     html += f'<p><strong>{key}：</strong>{value}</p>'
                 html += '</div>'
@@ -336,22 +237,11 @@ class MessagePusher:
                 report_content = result.get("report_content", "")
                 if report_content:
                     preview = f"{report_content[:50]}..." if len(report_content) > 50 else report_content
-                    html += f"""
-                       <div class="report-preview">
-                           <p><strong>报告预览：</strong>{preview}</p>
-                       </div>
-                       <input type="checkbox" id="report-{random.randint(1000, 9999)}" class="show-report">
-                       <label for="report-{random.randint(1000, 9999)}">查看完整报告</label>
-                       <div class="full-report">
-                           <pre>{report_content}</pre>
-                       </div>
-                       """
+                    report_id = random.randint(1000, 9999)
+                    html += f"""<div class="report-preview"><p><strong>报告预览：</strong>{preview}</p></div><input type="checkbox" id="report-{report_id}" class="show-report"><label for="report-{report_id}">查看完整报告</label><div class="full-report"><pre>{report_content}</pre></div>"""
 
             html += '</div>'
 
-        html += """
-           </body>
-           </html>
-           """
+        html += """</div></body></html>"""
 
         return html
