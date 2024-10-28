@@ -167,7 +167,7 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
         }
 
     current_time = datetime.now()
-    if current_time.hour < 12:
+    if not (17 <= current_time.hour < 20):
         logger.info("未到日报提交时间（需12点后）")
         return {
             "status": "skip",
@@ -251,11 +251,11 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
     current_time = datetime.now()
     submit_day = config.get_value('config.reportSettings.weekly.submitTime')
 
-    if current_time.weekday() + 1 != submit_day or current_time.hour < 12:
-        logger.info("未到周报提交时间（需指定日期12点后）")
+    if current_time.weekday() + 1 != submit_day or not (17 <= current_time.hour < 20):
+        logger.info("未到周报提交时间")
         return {
             "status": "skip",
-            "message": "未到周报提交时间（需指定日期12点后）",
+            "message": "未到周报提交时间",
             "task_type": "周报提交"
         }
 
@@ -346,11 +346,11 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
     last_day_of_month = (current_time.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
     submit_day = config.get_value('config.reportSettings.monthly.submitTime')
 
-    if current_time.day != min(submit_day, last_day_of_month.day) or current_time.hour < 12:
-        logger.info("未到月报提交时间（需指定日期12点后）")
+    if current_time.day != min(submit_day, last_day_of_month.day) or not (17 <= current_time.hour < 20):
+        logger.info("未到月报提交时间")
         return {
             "status": "skip",
-            "message": "未到月报提交时间（需指定日期12点后）",
+            "message": "未到月报提交时间",
             "task_type": "月报提交"
         }
 
