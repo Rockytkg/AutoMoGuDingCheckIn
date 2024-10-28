@@ -8,7 +8,7 @@ AutoMoGuDingCheckIn 旨在：
 
 - 自动化工学云应用中的签到过程。
 - 自动提交月报、周报、日报。
-- 适配云函数
+- ~~适配云函数~~
 
 ## 功能列表
 
@@ -21,7 +21,7 @@ AutoMoGuDingCheckIn 旨在：
 - [x] 自动提交月报
 - [x] AI生成周、日、月报
 - [ ] 打卡备注以及带图打卡
-- [ ] 适配云函数
+- [ ] ~~适配云函数~~
 
 ## 使用方法
 
@@ -47,60 +47,252 @@ AutoMoGuDingCheckIn 旨在：
 
 1. 打开user目录，根据下表修改json文件中的配置（每个文件就是一个用户）
 
-| 字段名                        | 描述                                                                   | 示例                                                                                                                         |
-|----------------------------|----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|
-| `phone`                    | 手机号                                                                  | `"1234567890"`                                                                                                             |
-| `password`                 | 工学云密码                                                                | `"your_password"`                                                                                                          |
-| `address`                  | 打卡地点，用于工学云显示（格式参照example.json）                                       | `"四川省 · 成都市 · 高新区 · 在科创十一街附近"`                                                                                             |
-| `latitude`                 | 打卡的纬度，精确到小数点后六位                                                      | `"34.059922"`                                                                                                              |
-| `longitude`                | 打卡的经度，精确到小数点后六位                                                      | `"-118.277437"`                                                                                                            |
-| `province`                 | 打卡的省份                                                                | `"四川省"`                                                                                                                    |
-| `city`                     | 打卡的城市                                                                | `"成都市"`                                                                                                                    |
-| `area`                     | 打卡的县/区                                                               | `"高新区"`                                                                                                                    |
-| `device`                   | 设备信息（[用这个小工具获取](https://www.123pan.com/s/rlqcVv-bQOPH.html)          | `"{brand: OnePlus PHP310, systemVersion: 13, Platform: Android, isPhysicalDevice: true, incremental: T.18b78b-be23-ce7d}"` |
-| `clockInImageCount`        | 打卡时候需要提交图片的数量，默认0                                                    | `0`                                                                                                                        |
-| `isSubmittedDaily`         | 是否提交日报                                                               | `false`                                                                                                                    |
-| `dailyReportImageCount`    | 日报提交图片数量（默认不提交，不为0会从img目录随机抽取）                                       | `0`                                                                                                                        |
-| `isSubmittedWeekly`        | 是否提交周报                                                               | `true`                                                                                                                     |
-| `weeklyReportImageCount`   | 周报提交图片数量（默认不提交，不为0会从img目录随机抽取）                                       | `0`                                                                                                                        |
-| `isSubmittedMonthlyReport` | 是否提交月报                                                               | `false`                                                                                                                    |
-| `monthlyReportImageCount`  | 月报提交图片数量（默认不提交，不为0会从img目录随机抽取）                                       | `0`                                                                                                                        |
-| `submitWeeklyTime`         | 周报提交时间                                                               | `"4"`                                                                                                                      |
-| `submitMonthlyReportTime`  | 月报提交时间                                                               | `"29"`                                                                                                                     |
-| `model`                    | OpenAI模型名称（提交周、日、月报需要填写）                                             | `"gpt-4o-mini"`                                                                                                            |
-| `apikey`                   | OpenAI API密钥                                                         | `"sk-osdhgosdipghpsdgjiosfvinoips"`                                                                                        |
-| `apiUrl`                   | OpenAI API URL（推荐[KKSJ API](https://api.kksj.org/register?aff=1kzT)） | `"https://api.openai.com/"`                                                                                                |
-| `pushType`                 | 推送方式                                                                 | `server`、`pushplus`、`anpush`                                                                                               |
-| `pushKey`                  | 推送密钥                                                                 | `null`                                                                                                                     |
+<table>
+    <tr>
+        <th>配置项</th>
+        <th>字段</th>
+        <th>说明</th>
+        <th>示例</th>
+    </tr>
+    <tr>
+        <td rowspan="2">用户信息</td>
+        <td>phone</td>
+        <td>工学云手机号，确保号码正确无误。</td>
+        <td>13800138000</td>
+    </tr>
+    <tr>
+        <td>password</td>
+        <td>工学云密码，注意区分大小写。</td>
+        <td>your_password</td>
+    </tr>
+    <tr>
+        <td rowspan="7">打卡设置</td>
+        <td>address</td>
+        <td>打卡地点的详细地址，确保信息准确。</td>
+        <td>四川省 · 成都市 · 高新区 · 在科创十一街附近</td>
+    </tr>
+    <tr>
+        <td>latitude</td>
+        <td>打卡地点的纬度。</td>
+        <td>34.059922</td>
+    </tr>
+    <tr>
+        <td>longitude</td>
+        <td>打卡地点的经度。</td>
+        <td>118.277435</td>
+    </tr>
+    <tr>
+        <td>province</td>
+        <td>所在省份。</td>
+        <td>四川省</td>
+    </tr>
+    <tr>
+        <td>city</td>
+        <td>所在城市。</td>
+        <td>成都市</td>
+    </tr>
+    <tr>
+        <td>area</td>
+        <td>所在区域。</td>
+        <td>高新区</td>
+    </tr>
+    <tr>
+        <td>imageCount</td>
+        <td>打卡时需要上传的图片数量，默认为0。</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td rowspan="8">报告设置</td>
+        <td>daily.enabled</td>
+        <td>是否启用每日报告（true 或 false）。</td>
+        <td>false</td>
+    </tr>
+    <tr>
+        <td>daily.imageCount</td>
+        <td>每日报告中需要上传的图片数量。</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>weekly.enabled</td>
+        <td>是否启用每周报告（true 或 false）。</td>
+        <td>true</td>
+    </tr>
+    <tr>
+        <td>weekly.imageCount</td>
+        <td>每周报告中需要上传的图片数量。</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>weekly.submitTime</td>
+        <td>提交时间（以小时为单位，范围为0-23）。</td>
+        <td>4</td>
+    </tr>
+    <tr>
+        <td>monthly.enabled</td>
+        <td>是否启用每月报告（true 或 false）。</td>
+        <td>false</td>
+    </tr>
+    <tr>
+        <td>monthly.imageCount</td>
+        <td>每月报告中需要上传的图片数量。</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>monthly.submitTime</td>
+        <td>提交时间（默认为29号）。</td>
+        <td>29</td>
+    </tr>
+    <tr>
+        <td rowspan="3">AI 设置</td>
+        <td>model</td>
+        <td>AI 模型名称（可根据需求修改）。</td>
+        <td>gpt-4o-mini</td>
+    </tr>
+    <tr>
+        <td>apikey</td>
+        <td>API 密钥，确保无误。</td>
+        <td>sk-osdhgosdipghpsdgjiosfvinoips</td>
+    </tr>
+    <tr>
+        <td>apiUrl</td>
+        <td>API 地址，通常为 `https://api.openai.com/`。</td>
+        <td>https://api.openai.com/</td>
+    </tr>
+    <tr>
+        <td rowspan="10">推送通知设置</td>
+        <td>type</td>
+        <td>推送通知的类型（如 Server、PushPlus 等）。</td>
+        <td>Server</td>
+    </tr>
+    <tr>
+        <td>enabled</td>
+        <td>是否启用该推送通知（true 或 false）。</td>
+        <td>true</td>
+    </tr>
+    <tr>
+        <td>sendKey/token</td>
+        <td>相应的密钥或令牌。</td>
+        <td>your_key</td>
+    </tr>
+    <tr>
+        <td>channel</td>
+        <td>对于 AnPush，填写通道 ID，多个用英文逗号隔开。</td>
+        <td>通道ID1,通道ID2</td>
+    </tr>
+    <tr>
+        <td>to</td>
+        <td>根据官方文档获取的接收者信息。</td>
+        <td>recipient@example.com</td>
+    </tr>
+    <tr>
+        <td>host</td>
+        <td>SMTP 服务地址。</td>
+        <td>smtp.example.com</td>
+    </tr>
+    <tr>
+        <td>port</td>
+        <td>SMTP 服务端口，通常为 465。</td>
+        <td>465</td>
+    </tr>
+    <tr>
+        <td>username</td>
+        <td>发件人邮箱地址。</td>
+        <td>sender@example.com</td>
+    </tr>
+    <tr>
+        <td>password</td>
+        <td>SMTP 密码。</td>
+        <td>smtp_password</td>
+    </tr>
+    <tr>
+        <td>from</td>
+        <td>发件人名称。</td>
+        <td>发件人名称</td>
+    </tr>
+    <tr>
+        <td rowspan="5">设备信息</td>
+        <td>设备信息</td>
+        <td>设备信息，<a href="https://www.123pan.com/s/rlqcVv-bQOPH.html" rel="nofollow">用这个小工具获取</a></td>
+        <td>{brand: TA J20, systemVersion: 17, Platform: Android, isPhysicalDevice: true, incremental: K23V10A}</td>
+    </tr>
+</table>
 
 #### 示例 JSON 配置
 
 ```json
 {
   "config": {
-    "phone": "1234567890",
-    "password": "your_password",
-    "address": "四川省 · 成都市 · 高新区 · 在科创十一街附近",
-    "latitude": "34.059922",
-    "longitude": "-118.277437",
-    "province": "四川省",
-    "city": "成都市",
-    "area": "高新区",
-    "clockInImageCount": 0,
-    "isSubmittedDaily": false,
-    "dailyReportImageCount": 0,
-    "isSubmittedWeekly": true,
-    "weeklyReportImageCount": 0,
-    "submitWeeklyTime": "4",
-    "isSubmittedMonthlyReport": false,
-    "monthlyReportImageCount": 0,
-    "submitMonthlyReportTime": "29",
-    "model": "gpt-4o-mini",
-    "apikey": "sk-osdhgosdipghpsdgjiosfvinoips",
-    "apiUrl": "https://api.openai.com/",
-    "pushType": null,
-    "pushKey": null,
-    "device": "{brand: OnePlus PHP110, systemVersion: 14, Platform: Android, isPhysicalDevice: true, incremental: T.1as885b-be80-be7f}"
+    "user": {
+      "phone": "工学云手机号",
+      "password": "工学云密码"
+    },
+    "clockIn": {
+      "location": {
+        "address": "四川省 · 成都市 · 高新区 · 在科创十一街附近",
+        "latitude": "34.059922",
+        "longitude": "118.277435",
+        "province": "四川省",
+        "city": "成都市",
+        "area": "高新区"
+      },
+      "imageCount": 0
+    },
+    "reportSettings": {
+      "daily": {
+        "enabled": false,
+        "imageCount": 0
+      },
+      "weekly": {
+        "enabled": true,
+        "imageCount": 0,
+        "submitTime": 4
+      },
+      "monthly": {
+        "enabled": false,
+        "imageCount": 0,
+        "submitTime": 29
+      }
+    },
+    "ai": {
+      "model": "gpt-4o-mini",
+      "apikey": "sk-osdhgosdipghpsdgjiosfvinoips",
+      "apiUrl": "https://api.openai.com/"
+    },
+    "pushNotifications": [
+      {
+        "type": "Server",
+        "enabled": true,
+        "sendKey": "your_key"
+      },
+      {
+        "type": "PushPlus",
+        "enabled": true,
+        "token": "your_token"
+      },
+      {
+        "type": "AnPush",
+        "enabled": true,
+        "token": "your_token",
+        "channel": "通道ID,多个用英文逗号隔开",
+        "to": "根据官方文档获取"
+      },
+      {
+        "type": "WxPusher",
+        "enabled": true,
+        "spt": "your_token"
+      },
+      {
+        "type": "SMTP",
+        "enabled": true,
+        "host": "smtp服务地址",
+        "port": 465,
+        "username": "发件人邮箱",
+        "password": "smtp密码",
+        "from": "发件人名称",
+        "to": "收件人邮箱"
+      }
+    ],
+    "device": "{brand: TA J20, systemVersion: 17, Platform: Android, isPhysicalDevice: true, incremental: K23V10A}"
   }
 }
 ```
@@ -113,9 +305,11 @@ AutoMoGuDingCheckIn 旨在：
 
 支持：
 
-- [Server酱](https://sct.ftqq.com/r/13600)
-- [PushPlus](https://www.pushplus.plus/)
-- [AnPush](https://anpush.com/)
+- ~~[Server酱](https://sct.ftqq.com/r/13600)~~
+- ~~[PushPlus](https://www.pushplus.plus/)~~
+- ~~[AnPush](https://anpush.com/)~~
+- ~~[WxPusher](https://wxpusher.zjiecode.com/)~~
+- SMTP
 
 ### 运行
 

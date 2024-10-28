@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import tempfile
 import time
 import uuid
@@ -37,18 +38,18 @@ class ApiClient:
     该类主要通过POST请求与API进行通信，并支持自动处理Token失效的情况。
 
     Attributes:
-        config_manager (ConfigManager): 用于管理配置的实例。
+        config (ConfigManager): 用于管理配置的实例。
         max_retries (int): 控制请求失败后重新尝试的次数，默认值为1。
     """
 
-    def __init__(self, config_manager: ConfigManager):
+    def __init__(self, config: ConfigManager):
         """
         初始化ApiClient实例。
 
-        :param config_manager: 用于管理配置的实例。
-        :type config_manager: ConfigManager
+        :param config: 用于管理配置的实例。
+        :type config: ConfigManager
         """
-        self.config_manager = config_manager
+        self.config = config
         self.max_retries = 5  # 控制重新尝试的次数
 
     def _post_request(
@@ -87,19 +88,18 @@ class ApiClient:
             if rsp.get('code') == 200 or rsp.get('code') == 6111:
                 return rsp
 
-            error_msg = rsp.get('msg', '未知错误')
-            if 'token失效' in error_msg and retry_count < self.max_retries:
+            if 'token失效' in rsp.get('msg', '未知错误') and retry_count < self.max_retries:
                 wait_time = 0.3 * (2 ** retry_count)
                 time.sleep(wait_time)
                 logger.warning('Token失效，正在重新登录...')
                 self.login()
-                headers['authorization'] = self.config_manager.get_user_info('token')
+                headers['authorization'] = self.config.get_value('userInfo.token')
                 return self._post_request(url, headers, data, msg, retry_count + 1)
             else:
-                raise ValueError(error_msg)
+                raise ValueError(rsp.get('msg','未知错误'))
 
         except (requests.RequestException, ValueError) as e:
-            if '账号不存在或密码错误！' in str(e) or retry_count >= self.max_retries:
+            if re.search(r'[\u4e00-\u9fff]', str(e)) or retry_count >= self.max_retries:
                 raise ValueError(f'{msg}，{str(e)}')
 
             wait_time = 0.3 * (2 ** retry_count)
@@ -159,8 +159,8 @@ class ApiClient:
         """
         url = 'session/user/v6/login'
         data = {
-            'phone': aes_encrypt(self.config_manager.get_config('phone')),
-            'password': aes_encrypt(self.config_manager.get_config('password')),
+            'phone': aes_encrypt(self.config.get_value('config.user.phone')),
+            'password': aes_encrypt(self.config.get_value('config.user.password')),
             'captcha': self.pass_captcha(),
             'loginType': 'android',
             'uuid': str(uuid.uuid4()).replace('-', ''),
@@ -170,7 +170,7 @@ class ApiClient:
         }
         rsp = self._post_request(url, HEADERS, data, '登陆失败')
         user_info = json.loads(aes_decrypt(rsp.get('data', '')))
-        self.config_manager.update_config('userInfo', user_info)
+        self.config.update_config(user_info, 'userInfo')
 
     def fetch_internship_plan(self) -> None:
         """
@@ -187,13 +187,13 @@ class ApiClient:
         }
         headers = self._get_authenticated_headers(
             sign_data=[
-                self.config_manager.get_user_info('userId'),
-                self.config_manager.get_user_info('roleKey')
+                self.config.get_value('userInfo.userId'),
+                self.config.get_value('userInfo.roleKey')
             ]
         )
         rsp = self._post_request(url, headers, data, '获取planID失败')
         plan_info = rsp.get('data', [{}])[0]
-        self.config_manager.update_config('planInfo', plan_info)
+        self.config.update_config(plan_info, 'planInfo')
 
     def get_job_info(self) -> Dict[str, Any]:
         """
@@ -208,7 +208,7 @@ class ApiClient:
         """
         url = 'practice/job/v4/infoByStu'
         data = {
-            "planId": self.config_manager.get_plan_info('planId'),
+            "planId": self.config.get_value('planInfo.planId'),
             "t": aes_encrypt(str(int(time.time() * 1000)))
         }
         headers = self._get_authenticated_headers()
@@ -230,13 +230,13 @@ class ApiClient:
             "currPage": 1,
             "pageSize": 10,
             "reportType": report_type,
-            "planId": self.config_manager.get_plan_info('planId'),
+            "planId": self.config.get_value('planInfo.planId'),
             "t": aes_encrypt(str(int(time.time() * 1000)))
         }
         headers = self._get_authenticated_headers(
             sign_data=[
-                self.config_manager.get_user_info('userId'),
-                self.config_manager.get_user_info('roleKey'),
+                self.config.get_value('userInfo.userId'),
+                self.config.get_value('userInfo.roleKey'),
                 report_type
             ]
         )
@@ -256,9 +256,9 @@ class ApiClient:
         url = 'practice/paper/v5/save'
         headers = self._get_authenticated_headers(
             sign_data=[
-                self.config_manager.get_user_info('userId'),
+                self.config.get_value('userInfo.userId'),
                 report_info.get('reportType'),
-                self.config_manager.get_plan_info('planId'),
+                self.config.get_value('planInfo.planId'),
                 report_info.get('title'),
             ]
         )
@@ -282,7 +282,7 @@ class ApiClient:
             "latitude": None,
             "gpmsSchoolYear": None,
             "longitude": None,
-            "planId": self.config_manager.get_plan_info('planId'),
+            "planId": self.config.get_value('planInfo.planId'),
             "planName": None,
             "reportId": None,
             "reportType": report_info.get('reportType'),
@@ -371,37 +371,31 @@ class ApiClient:
 
         data = {
             "distance": None,
-            "address": self.config_manager.get_config('address'),
             "content": None,
             "lastAddress": None,
             "lastDetailAddress": checkin_info.get('lastDetailAddress'),
             "attendanceId": None,
-            "city": self.config_manager.get_config('city'),
-            "area": self.config_manager.get_config('area'),
             "country": "中国",
             "createBy": None,
             "createTime": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
             "description": None,
-            "device": self.config_manager.get_config('device'),
+            "device": self.config.get_value('config.device'),
             "images": None,
             "isDeleted": None,
             "isReplace": None,
-            "latitude": self.config_manager.get_config('latitude'),
-            "longitude": self.config_manager.get_config('longitude'),
             "modifiedBy": None,
             "modifiedTime": None,
-            "province": self.config_manager.get_config('province'),
             "schoolId": None,
             "state": "NORMAL",
             "teacherId": None,
             "teacherNumber": None,
             "type": checkin_info.get('type'),
             "stuId": None,
-            "planId": self.config_manager.get_plan_info('planId'),
+            "planId": self.config.get_value('planInfo.planId'),
             "attendanceType": None,
             "username": None,
             "attachments": checkin_info.get('attachments', None),
-            "userId": self.config_manager.get_user_info('userId'),
+            "userId": self.config.get_value('userInfo.userId'),
             "isSYN": None,
             "studentId": None,
             "applyState": None,
@@ -419,13 +413,15 @@ class ApiClient:
             "t": aes_encrypt(str(int(time.time() * 1000)))
         }
 
+        data.update(self.config.get_value('config.clockIn.location'))
+
         headers = self._get_authenticated_headers(
             sign_data=[
-                self.config_manager.get_config('device'),
+                self.config.get_value('config.device'),
                 checkin_info.get('type'),
-                self.config_manager.get_plan_info('planId'),
-                self.config_manager.get_user_info('userId'),
-                self.config_manager.get_config('address')
+                self.config.get_value('planInfo.planId'),
+                self.config.get_value('userInfo.userId'),
+                self.config.get_value('config.clockIn.location.address')
             ]
         )
 
@@ -466,9 +462,9 @@ class ApiClient:
         """
         headers = {
             **HEADERS,
-            'authorization': self.config_manager.get_user_info('token'),
-            'userid': self.config_manager.get_user_info('userId'),
-            'rolekey': self.config_manager.get_user_info('roleKey'),
+            'authorization': self.config.get_value('userInfo.token'),
+            'userid': self.config.get_value('userInfo.userId'),
+            'rolekey': self.config.get_value('userInfo.roleKey'),
         }
         if sign_data:
             headers['sign'] = create_sign(*sign_data)
@@ -502,11 +498,11 @@ def generate_article(
     :rtype: str
     """
     headers = {
-        'Authorization': f"Bearer {config.get_config('apikey')}",
+        'Authorization': f"Bearer {config.get_value('config.ai.apikey')}",
     }
 
     data = {
-        "model": config.get_config('model'),
+        "model": config.get_value('config.ai.model'),
         "messages": [
             {"role": "system",
              "content": f"According to the information provided by the user, write an article according to the template, the reply does not allow the use of Markdown syntax, the content is in line with the job description, the content of the article is fluent, in line with the Chinese grammatical conventions,Number of characters greater than {count}"},
@@ -518,7 +514,7 @@ def generate_article(
         ]
     }
 
-    url = f"{config.get_config('apiUrl').rstrip('/')}/v1/chat/completions"
+    url = f"{config.get_value('config.ai.apiUrl').rstrip('/')}/v1/chat/completions"
 
     for attempt in range(max_retries):
         try:
@@ -591,9 +587,9 @@ def upload(
                     # 读取处理后的图片内容
                     with open(temp_file.name, 'rb') as f:
                         key = (
-                            f"upload/{config.get_user_info('orgJson').get('snowFlakeId', '')}"
+                            f"upload/{config.get_value('userInfo.orgJson.snowFlakeId')}"
                             f"/{time.strftime('%Y-%m-%d', time.localtime())}"
-                            f"/report/{config.get_user_info('userId')}_{int(time.time() * 1000000)}.jpg"
+                            f"/report/{config.get_value('userInfo.userId')}_{int(time.time() * 1000000)}.jpg"
                         )
                         data = {
                             'token': token,

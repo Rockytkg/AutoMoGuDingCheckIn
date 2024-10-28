@@ -29,9 +29,9 @@ def get_api_client(config: ConfigManager) -> ApiClient:
     :rtype: ApiClient
     """
     api_client = ApiClient(config)
-    if not config.get_user_info('token'):
+    if not config.get_value('userInfo.token'):
         api_client.login()
-    if not config.get_plan_info('planId'):
+    if not config.get_value('planInfo.planId'):
         api_client.fetch_internship_plan()
     else:
         logger.info("使用本地数据")
@@ -113,10 +113,10 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
                     "task_type": "打卡"
                 }
 
-        user_name = config.get_user_info('nikeName')
+        user_name = config.get_value('userInfo.nikeName')
         logger.info(f'用户 {user_name} 开始 {display_type} 打卡')
 
-        attachments = upload_img(api_client, config, config.get_config("clockInImageCount"))
+        attachments = upload_img(api_client, config, config.get_value("config.clockIn.imageCount"))
 
         # 设置打卡信息
         checkin_info = {
@@ -136,7 +136,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
                 "姓名": user_name,
                 "打卡类型": display_type,
                 "打卡时间": current_time.strftime("%Y-%m-%d %H:%M:%S"),
-                "打卡地点": config.get_config('address')
+                "打卡地点": config.get_value('config.clockIn.location.address')
             }
         }
     except Exception as e:
@@ -146,7 +146,6 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
             "message": f"打卡失败: {str(e)}",
             "task_type": "打卡"
         }
-
 
 
 def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[str, Any]:
@@ -159,7 +158,7 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
     :return: 执行结果
     :rtype: Dict[str, Any]
     """
-    if not config.get_config("isSubmittedDaily"):
+    if not config.get_value("config.reportSettings.daily.enabled"):
         logger.info("用户未开启日报提交功能，跳过日报提交任务")
         return {
             "status": "skip",
@@ -198,7 +197,7 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
         content = generate_article(config, f"第{report_count}天日报", job_info)
 
         # 上传图片并获取附件
-        attachments = upload_img(api_client, config, config.get_config("dailyReportImageCount"))
+        attachments = upload_img(api_client, config, config.get_value("config.reportSettings.daily.imageCount"))
 
         report_info = {
             'title': f'第{report_count}天日报',
@@ -241,7 +240,7 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
     :return: 执行结果
     :rtype: Dict[str, Any]
     """
-    if not config.get_config("isSubmittedWeekly"):
+    if not config.get_value('config.reportSettings.weekly.enabled'):
         logger.info("用户未开启周报提交功能，跳过周报提交任务")
         return {
             "status": "skip",
@@ -250,7 +249,7 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
         }
 
     current_time = datetime.now()
-    submit_day = int(config.get_config("submitWeeklyTime"))
+    submit_day = config.get_value('config.reportSettings.weekly.submitTime')
 
     if current_time.weekday() + 1 != submit_day or current_time.hour < 12:
         logger.info("未到周报提交时间（需指定日期12点后）")
@@ -287,7 +286,7 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
         content = generate_article(config, f"第{week}周周报", job_info)
 
         # 上传图片并获取附件
-        attachments = upload_img(api_client, config, config.get_config("weeklyReportImageCount"))
+        attachments = upload_img(api_client, config, config.get_value('config.reportSettings.weekly.imageCount'))
 
         report_info = {
             'title': f"第{week}周周报",
@@ -335,7 +334,7 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
     :return: 执行结果
     :rtype: Dict[str, Any]
     """
-    if not config.get_config("isSubmittedMonthlyReport"):
+    if not config.get_value('config.reportSettings.monthly.enabled'):
         logger.info("用户未开启月报提交功能，跳过月报提交任务")
         return {
             "status": "skip",
@@ -345,7 +344,7 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
 
     current_time = datetime.now()
     last_day_of_month = (current_time.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-    submit_day = int(config.get_config("submitMonthlyReportTime"))
+    submit_day = config.get_value('config.reportSettings.monthly.submitTime')
 
     if current_time.day != min(submit_day, last_day_of_month.day) or current_time.hour < 12:
         logger.info("未到月报提交时间（需指定日期12点后）")
@@ -379,7 +378,7 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
         content = generate_article(config, f"第{month}月月报", job_info)
 
         # 上传图片并获取附件
-        attachments = upload_img(api_client, config, config.get_config("monthlyReportImageCount"))
+        attachments = upload_img(api_client, config, config.get_value('config.reportSettings.monthly.imageCount'))
 
         report_info = {
             'title': f"第{month}月月报",
@@ -413,95 +412,6 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
         }
 
 
-def generate_markdown_message(results: List[Dict[str, Any]]) -> str:
-    """生成 Markdown 格式的消息
-
-    :param results: 任务执行结果列表
-    :type results: List[Dict[str, Any]]
-    :return: Markdown 格式的消息
-    :rtype: str
-    """
-    message = "# 工学云任务执行报告\n\n"
-
-    # 任务执行统计
-    total_tasks = len(results)
-    success_tasks = sum(1 for result in results if result.get("status") == "success")
-    fail_tasks = sum(1 for result in results if result.get("status") == "fail")
-    skip_tasks = sum(1 for result in results if result.get("status") == "skip")
-
-    message += "## 📊 执行统计\n\n"
-    message += f"- 总任务数：{total_tasks}\n"
-    message += f"- 成功：{success_tasks}\n"
-    message += f"- 失败：{fail_tasks}\n"
-    message += f"- 跳过：{skip_tasks}\n\n"
-
-    # 详细任务报告
-    message += "## 📝 详细任务报告\n\n"
-
-    for result in results:
-        task_type = result.get("task_type", "未知任务")
-        status = result.get("status", "unknown")
-        status_emoji = {
-            "success": "✅",
-            "fail": "❌",
-            "skip": "⏭️"
-        }.get(status, "❓")
-
-        message += f"### {status_emoji} {task_type}\n\n"
-        message += f"**状态**：{status}\n\n"
-        message += f"**结果**：{result.get('message', '无消息')}\n\n"
-
-        details = result.get("details")
-        if status == "success" and isinstance(details, dict):
-            message += "**详细信息**：\n\n"
-            for key, value in details.items():
-                message += f"- **{key}**：{value}\n"
-            message += "\n"
-
-        # 添加报告内容（如果有）
-        if status == "success" and task_type in ["日报提交", "周报提交", "月报提交"]:
-            report_content = result.get("report_content", "")
-            if report_content:
-                preview = report_content[:200] + "..." if len(report_content) > 200 else report_content
-                message += f"**报告预览**：\n\n{preview}\n\n"
-                message += "<details>\n"
-                message += "<summary>点击查看完整报告</summary>\n\n"
-                message += f"```\n{report_content}\n```\n"
-                message += "</details>\n\n"
-
-        message += "---\n\n"
-
-    return message
-
-
-def push_notification(config: ConfigManager, results: List[Dict[str, Any]], message: str) -> None:
-    """发送推送消息
-
-    :param config: 配置管理器
-    :type config: ConfigManager
-    :param results: 任务执行结果列表
-    :type results: List[Dict[str, Any]]
-    :param message: 消息内容
-    :type message: str
-    """
-    push_key = config.get_config('pushKey')
-    push_type = config.get_config('pushType')
-
-    if push_key and push_type:
-        pusher = MessagePusher(push_key, push_type)
-
-        success_count = sum(1 for result in results if result.get("status") == "success")
-        total_count = len(results)
-
-        # 简化标题，使用表情符号表示状态
-        status_emoji = "🎉" if success_count == total_count else "📊"
-        title = f"{status_emoji} 工学云报告 ({success_count}/{total_count})"
-
-        pusher.push(title, message)
-    else:
-        logger.info("用户未配置推送")
-
-
 def run(config: ConfigManager) -> None:
     """执行所有任务
 
@@ -509,6 +419,12 @@ def run(config: ConfigManager) -> None:
     :type config: ConfigManager
     """
     results: List[Dict[str, Any]] = []
+
+    try:
+        pusher = MessagePusher(config.get_value('config.pushNotifications'))
+    except Exception as e:
+        logger.error(f"获取消息推送客户端失败: {str(e)}")
+        return
 
     try:
         api_client = get_api_client(config)
@@ -520,12 +436,11 @@ def run(config: ConfigManager) -> None:
             "message": error_message,
             "task_type": "API客户端初始化"
         })
-        message = generate_markdown_message(results)
-        push_notification(config, results, message)
+        pusher.push(results)
         logger.info("任务异常结束\n")
-        return  # 终止执行当前用户的所有任务
+        return
 
-    logger.info(f"开始执行：{config.get_user_info('nikeName')}")
+    logger.info(f"开始执行：{config.get_value('userInfo.nikeName')}")
 
     try:
         results = [
@@ -543,9 +458,8 @@ def run(config: ConfigManager) -> None:
             "task_type": "任务执行"
         })
 
-    message = generate_markdown_message(results)
-    push_notification(config, results, message)
-    logger.info(f"执行结束：{config.get_user_info('nikeName')}")
+    pusher.push(results)
+    logger.info(f"执行结束：{config.get_value('userInfo.nikeName')}")
 
 
 def main(selected_files: list = None) -> None:
@@ -556,7 +470,7 @@ def main(selected_files: list = None) -> None:
     """
     logger.info("工学云任务开始")
 
-    json_files = {f[:-5]: f for f in os.listdir(USER_DIR) if f.endswith('.json')}  # 创建一个字典，以便快速查找
+    json_files = {f[:-5]: f for f in os.listdir(USER_DIR) if f.endswith('.json')}
     if not json_files:
         logger.info("打卡文件未配置")
         return
