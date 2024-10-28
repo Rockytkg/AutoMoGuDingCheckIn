@@ -1,27 +1,75 @@
 {
   "config": {
-    "phone": "1234567890",
-    "password": "your_password",
-    "address": "四川省 · 成都市 · 高新区 · 在科创十一街附近",
-    "latitude": "34.059922",
-    "longitude": "-118.277437",
-    "province": "四川省",
-    "city": "成都市",
-    "area": "高新区",
-    "clockInImageCount": 0,
-    "isSubmittedDaily": false,
-    "dailyReportImageCount": 0,
-    "isSubmittedWeekly": true,
-    "weeklyReportImageCount": 0,
-    "submitWeeklyTime": "4",
-    "isSubmittedMonthlyReport": false,
-    "monthlyReportImageCount": 0,
-    "submitMonthlyReportTime": "29",
-    "model": "gpt-4o-mini",
-    "apikey": "sk-osdhgosdipghpsdgjiosfvinoips",
-    "apiUrl": "https://api.openai.com/",
-    "pushType": null,
-    "pushKey": null,
-    "device": "{brand: OnePlus PHP110, systemVersion: 14, Platform: Android, isPhysicalDevice: true, incremental: T.18b885b-be80-be7f}"
+    "user": {
+      "phone": "工学云手机号",
+      "password": "工学云密码"
+    },
+    "clockIn": {
+      "location": {
+        "address": "四川省 · 成都市 · 高新区 · 在科创十一街附近",
+        "latitude": "34.059922",
+        "longitude": "118.277435",
+        "province": "四川省",
+        "city": "成都市",
+        "area": "高新区"
+      },
+      "imageCount": 0
+    },
+    "reportSettings": {
+      "daily": {
+        "enabled": false,
+        "imageCount": 0
+      },
+      "weekly": {
+        "enabled": true,
+        "imageCount": 0,
+        "submitTime": 4
+      },
+      "monthly": {
+        "enabled": false,
+        "imageCount": 0,
+        "submitTime": 29
+      }
+    },
+    "ai": {
+      "model": "gpt-4o-mini",
+      "apikey": "sk-osdhgosdipghpsdgjiosfvinoips",
+      "apiUrl": "https://api.openai.com/"
+    },
+    "pushNotifications": [
+      {
+        "type": "Server",
+        "enabled": true,
+        "sendKey": "your_key"
+      },
+      {
+        "type": "PushPlus",
+        "enabled": true,
+        "token": "your_token"
+      },
+      {
+        "type": "AnPush",
+        "enabled": true,
+        "token": "your_token",
+        "channel": "通道ID,多个用英文逗号隔开",
+        "to": "根据官方文档获取"
+      },
+      {
+        "type": "WxPusher",
+        "enabled": true,
+        "spt": "your_token"
+      },
+      {
+        "type": "SMTP",
+        "enabled": true,
+        "host": "smtp服务地址",
+        "port": 465,
+        "username": "发件人邮箱",
+        "password": "smtp密码",
+        "from": "发件人名称",
+        "to": "收件人邮箱"
+      }
+    ],
+    "device": "{brand: TA J20, systemVersion: 17, Platform: Android, isPhysicalDevice: true, incremental: K23V10A}"
   }
 }

@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import tempfile
 import time
 import uuid
@@ -87,8 +88,7 @@ class ApiClient:
             if rsp.get('code') == 200 or rsp.get('code') == 6111:
                 return rsp
 
-            error_msg = rsp.get('msg', '未知错误')
-            if 'token失效' in error_msg and retry_count < self.max_retries:
+            if 'token失效' in rsp.get('msg', '未知错误') and retry_count < self.max_retries:
                 wait_time = 0.3 * (2 ** retry_count)
                 time.sleep(wait_time)
                 logger.warning('Token失效，正在重新登录...')
@@ -96,10 +96,10 @@ class ApiClient:
                 headers['authorization'] = self.config.get_value('userInfo.token')
                 return self._post_request(url, headers, data, msg, retry_count + 1)
             else:
-                raise ValueError(error_msg)
+                raise ValueError(rsp.get('msg','未知错误'))
 
         except (requests.RequestException, ValueError) as e:
-            if '账号不存在或密码错误！' in str(e) or retry_count >= self.max_retries:
+            if re.search(r'[\u4e00-\u9fff]', str(e)) or retry_count >= self.max_retries:
                 raise ValueError(f'{msg}，{str(e)}')
 
             wait_time = 0.3 * (2 ** retry_count)
