@@ -6,6 +6,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+import requests
+
 
 class MessagePusher:
     STATUS_EMOJIS = {
@@ -46,13 +48,13 @@ class MessagePusher:
                         content = self._generate_markdown_message(results)
                         self._server_push(service_config, title, content)
                     elif service_type == "PushPlus":
-                        content = self._generate_markdown_message(results)
+                        content = self._generate_html_message(results)
                         self._pushplus_push(service_config, title, content)
                     elif service_type == "AnPush":
                         content = self._generate_markdown_message(results)
                         self._anpush_push(service_config, title, content)
                     elif service_type == "WxPusher":
-                        content = self._generate_markdown_message(results)
+                        content = self._generate_html_message(results)
                         self._wxpusher_push(service_config, title, content)
                     elif service_type == "SMTP":
                         content = self._generate_html_message(results)
@@ -73,7 +75,20 @@ class MessagePusher:
         :param content: 内容
         :type content: str
         """
-        pass
+        url = f'https://sctapi.ftqq.com/{config['sendKey']}.send'
+        data = {
+            "title": title,
+            "desp": content
+        }
+
+        try:
+            rsp = requests.post(url, data=data).json()
+            if rsp.get("code") == 0:
+                self._logger.info("Server酱推送成功")
+            else:
+                raise Exception(rsp.get("message"))
+        except Exception as e:
+            self._logger.error(f"Server酱推送失败: {str(e)}")
 
     def _pushplus_push(self, config: dict[str, Any], title: str, content: str):
         """PushPlus 推送
@@ -85,7 +100,20 @@ class MessagePusher:
         :param content: 内容
         :type content: str
         """
-        pass
+        url = f'https://www.pushplus.plus/send/{config["token"]}'
+        data = {
+            "title": title,
+            "content": content
+        }
+
+        try:
+            rsp = requests.post(url, data=data).json()
+            if rsp.get("code") == 200:
+                self._logger.info("PushPlus推送成功")
+            else:
+                raise Exception(rsp.get("msg"))
+        except Exception as e:
+            self._logger.error(f"PushPlus推送失败: {str(e)}")
 
     def _anpush_push(self, config: dict[str, Any], title: str, content: str):
         """AnPush 推送
@@ -97,7 +125,20 @@ class MessagePusher:
         :param content: 内容
         :type content: str
         """
-        pass
+        url = f'https://api.anpush.com/push/{config["token"]}'
+        data = {
+            "title": title,
+            "content": content
+        }
+
+        try:
+            rsp = requests.post(url, data=data).json()
+            if rsp.get("code") == 200:
+                self._logger.info("AnPush推送成功")
+            else:
+                raise Exception(rsp.get("msg"))
+        except Exception as e:
+            self._logger.error(f"AnPush推送失败: {str(e)}")
 
     def _wxpusher_push(self, config: dict[str, Any], title: str, content: str):
         """WxPusher 推送
@@ -109,7 +150,22 @@ class MessagePusher:
         :param content: 内容
         :type content: str
         """
-        pass
+        url = f'https://wxpusher.zjiecode.com/api/send/message/simple-push'
+        data = {
+            "content": content,
+            "summary": title,
+            "contentType": 2,
+            "spt": config["spt"],
+        }
+
+        try:
+            rsp = requests.post(url, data=data).json()
+            if rsp.get("code") == 1000:
+                self._logger.info("WxPusher推送成功")
+            else:
+                raise Exception(rsp.get("msg"))
+        except Exception as e:
+            self._logger.error(f"WxPusher推送失败: {str(e)}")
 
     def _smtp_push(self, config: dict[str, Any], title: str, content: str):
         """SMTP 邮件推送

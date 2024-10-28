@@ -305,10 +305,10 @@ AutoMoGuDingCheckIn 旨在：
 
 支持：
 
-- ~~[Server酱](https://sct.ftqq.com/r/13600)~~
-- ~~[PushPlus](https://www.pushplus.plus/)~~
-- ~~[AnPush](https://anpush.com/)~~
-- ~~[WxPusher](https://wxpusher.zjiecode.com/)~~
+- [Server酱](https://sct.ftqq.com/r/13600)
+- [PushPlus](https://www.pushplus.plus/)
+- [AnPush](https://anpush.com/)
+- [WxPusher](https://wxpusher.zjiecode.com/)
 - SMTP
 
 ### 运行

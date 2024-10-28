@@ -57,7 +57,7 @@
       {
         "type": "WxPusher",
         "enabled": true,
-        "spt": "your_token"
+        "spt": "your_spt"
       },
       {
         "type": "SMTP",
