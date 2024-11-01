@@ -77,7 +77,7 @@ class MessagePusher:
         :param content: 内容
         :type content: str
         """
-        url = f'https://sctapi.ftqq.com/{config['sendKey']}.send'
+        url = f'https://sctapi.ftqq.com/{config["sendKey"]}.send'
         data = {
             "title": title,
             "desp": content
