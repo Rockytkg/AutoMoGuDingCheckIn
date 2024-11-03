@@ -378,7 +378,7 @@ class ApiClient:
             "country": "中国",
             "createBy": None,
             "createTime": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-            "description": None,
+            "description": checkin_info.get('description', None),
             "device": self.config.get_value('config.device'),
             "images": None,
             "isDeleted": None,

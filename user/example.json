@@ -13,7 +13,12 @@
         "city": "成都市",
         "area": "高新区"
       },
-      "imageCount": 0
+      "imageCount": 0,
+      "description": [
+        "今天天气不错",
+        "今天天气很好",
+        "今天天气不太好"
+      ]
     },
     "reportSettings": {
       "daily": {

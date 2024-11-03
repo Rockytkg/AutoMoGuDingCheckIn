@@ -116,13 +116,17 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
         user_name = config.get_value('userInfo.nikeName')
         logger.info(f'用户 {user_name} 开始 {display_type} 打卡')
 
+        # 打卡图片和备注
         attachments = upload_img(api_client, config, config.get_value("config.clockIn.imageCount"))
+        description = random.choice(config.get_value('config.clockIn.description')) if config.get_value(
+            'config.clockIn.description') else None
 
         # 设置打卡信息
         checkin_info = {
             'type': checkin_type,
             'lastDetailAddress': last_checkin_info.get('address'),
-            'attachments': attachments or None
+            'attachments': attachments or None,
+            'description': description
         }
 
         api_client.submit_clock_in(checkin_info)

@@ -20,7 +20,7 @@ AutoMoGuDingCheckIn 旨在：
 - [x] 自动提交周报
 - [x] 自动提交月报
 - [x] AI生成周、日、月报
-- [ ] 打卡备注以及带图打卡
+- [x] 打卡备注以及带图打卡
 - [ ] ~~适配云函数~~
 
 ## 使用方法
@@ -66,7 +66,7 @@ AutoMoGuDingCheckIn 旨在：
         <td>your_password</td>
     </tr>
     <tr>
-        <td rowspan="7">打卡设置</td>
+        <td rowspan="8">打卡设置</td>
         <td>address</td>
         <td>打卡地点的详细地址，确保信息准确。</td>
         <td>四川省 · 成都市 · 高新区 · 在科创十一街附近</td>
@@ -100,6 +100,11 @@ AutoMoGuDingCheckIn 旨在：
         <td>imageCount</td>
         <td>打卡时需要上传的图片数量，默认为0。</td>
         <td>0</td>
+    </tr>
+    <tr>
+        <td>description</td>
+        <td>打卡备注</td>
+        <td>列表，一个元素为一条，打卡时候随机抽取，若为空就不带备注</td>
     </tr>
     <tr>
         <td rowspan="8">报告设置</td>
@@ -235,7 +240,12 @@ AutoMoGuDingCheckIn 旨在：
         "city": "成都市",
         "area": "高新区"
       },
-      "imageCount": 0
+      "imageCount": 0,
+      "description": [
+        "今天天气不错",
+        "今天天气很好",
+        "今天天气不太好"
+      ]
     },
     "reportSettings": {
       "daily": {
@@ -279,7 +289,7 @@ AutoMoGuDingCheckIn 旨在：
       {
         "type": "WxPusher",
         "enabled": true,
-        "spt": "your_token"
+        "spt": "your_spt"
       },
       {
         "type": "SMTP",
