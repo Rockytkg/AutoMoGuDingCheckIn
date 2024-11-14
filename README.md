@@ -12,16 +12,16 @@ AutoMoGuDingCheckIn 旨在：
 
 ## 功能列表
 
-- [x] 自动签到
-- [x] 消息推送功能
-- [x] 多用户支持
-- [x] 打卡位置浮动
-- [x] 自动提交日报
-- [x] 自动提交周报
-- [x] 自动提交月报
-- [x] AI生成周、日、月报
-- [x] 打卡备注以及带图打卡
-- [ ] ~~适配云函数~~
+- [X]  自动签到
+- [X]  消息推送功能
+- [X]  多用户支持
+- [X]  打卡位置浮动
+- [X]  自动提交日报
+- [X]  自动提交周报
+- [X]  自动提交月报
+- [X]  AI生成周、日、月报
+- [X]  打卡备注以及带图打卡
+- [ ]  ~~适配云函数~~
 
 ## 使用方法
 
@@ -33,15 +33,16 @@ AutoMoGuDingCheckIn 旨在：
 ### 安装
 
 1. 克隆代码库：
-    ```bash
-    git clone https://github.com/Rockytkg/AutoMoGuDingCheckIn.git
-    cd AutoMoGuDingCheckIn
-    ```
 
+   ```bash
+   git clone https://github.com/Rockytkg/AutoMoGuDingCheckIn.git
+   cd AutoMoGuDingCheckIn
+   ```
 2. 安装依赖：
-    ```bash
-    pip install -r requirements.txt
-    ```
+
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ### 配置
 
@@ -150,12 +151,12 @@ AutoMoGuDingCheckIn 旨在：
     <tr>
         <td rowspan="3">AI 设置</td>
         <td>model</td>
-        <td>AI 模型名称（可根据需求修改）。</td>
+        <td>AI 模型名称（可根据需求修改）。国内模型通义千问填"qwen-plus"，国外填openai模型</td>
         <td>gpt-4o-mini</td>
     </tr>
     <tr>
         <td>apikey</td>
-        <td>API 密钥，确保无误。</td>
+        <td>API 密钥，确保无误。<a href="https://blog.csdn.net/shenzhibiao/article/details/140590408?ops_request_misc=%257B%2522request%255Fid%2522%253A%25223EFF5260-756B-4ADE-A488-9422FCB03A36%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&request_id=3EFF5260-756B-4ADE-A488-9422FCB03A36&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~top_positive~default-1-140590408-null-null.142^v100^pc_search_result_base8&utm_term=通义千问api&spm=1018.2226.3001.4187" rel="nofollow">获取通义千问apikey方法</a></td>
         <td>sk-osdhgosdipghpsdgjiosfvinoips</td>
     </tr>
     <tr>
@@ -221,6 +222,7 @@ AutoMoGuDingCheckIn 旨在：
         <td>{brand: TA J20, systemVersion: 17, Platform: Android, isPhysicalDevice: true, incremental: K23V10A}</td>
     </tr>
 </table>
+
 
 #### 示例 JSON 配置
 
@@ -337,4 +339,5 @@ python main.py
 如有任何疑问或需要支持，请通过提交 [issue](https://github.com/Rockytkg/AutoMoGuDingCheckIn/issues) 与我们联系。
 
 ## start
+
 [![Stargazers over time](https://starchart.cc/Rockytkg/AutoMoGuDingCheckIn.svg?variant=adaptive)](https://starchart.cc/Rockytkg/AutoMoGuDingCheckIn)

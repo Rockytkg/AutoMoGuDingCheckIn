@@ -213,7 +213,10 @@ class ApiClient:
         }
         headers = self._get_authenticated_headers()
         rsp = self._post_request(url, headers, data, '获取岗位信息失败')
-        return rsp.get('data', {})
+        result = rsp.get('data', {})
+        if result==None:
+            result = {"jobId":""}
+        return result
 
     def get_submitted_reports_info(self, report_type: str) -> Dict[str, Any]:
         """
@@ -497,46 +500,84 @@ def generate_article(
     :return: 文章内容
     :rtype: str
     """
-    headers = {
-        'Authorization': f"Bearer {config.get_value('config.ai.apikey')}",
-    }
+    model_name = config.get_value('config.ai.model')
+    
+    if model_name=="qwen-plus":
+         for attempt in range(max_retries):
+            try:
+                logger.info(f"第 {attempt + 1} 次尝试生成文章")
+                client = OpenAI(
+                    api_key=config.get_value('config.ai.apikey'),
+                    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+                )
 
-    data = {
-        "model": config.get_value('config.ai.model'),
-        "messages": [
-            {"role": "system",
-             "content": f"According to the information provided by the user, write an article according to the template, the reply does not allow the use of Markdown syntax, the content is in line with the job description, the content of the article is fluent, in line with the Chinese grammatical conventions,Number of characters greater than {count}"},
-            {"role": "system",
-             "content": "模板：实习地点：xxxx\n\n工作内容：\n\nxzzzx\n\n工作总结：\n\nxxxxxx\n\n遇到问题：\n\nxzzzx\n\n自我评价：\n\nxxxxxx"},
-            {"role": "user",
-             "content": f"{title},工作地点:{job_info['jobAddress']};公司名:{job_info['practiceCompanyEntity']['companyName']};"
-                        f"岗位职责:{job_info['quartersIntroduce']};公司所属行业:{job_info['practiceCompanyEntity']['tradeValue']}"}
-        ]
-    }
+                completion = client.chat.completions.create(
+                    model="qwen-plus",  # 模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
+                    messages=[
+                            {"role": "system",
+                                "content": f"According to the information provided by the user, write an article according to the template, the reply does not allow the use of Markdown syntax, the content is in line with the job description, the content of the article is fluent, in line with the Chinese grammatical conventions,Number of characters greater than {count}"},
+                            {"role": "system",
+                                "content": "模板：实习地点：xxxx\n\n工作内容：\n\nxzzzx\n\n工作总结：\n\nxxxxxx\n\n遇到问题：\n\nxzzzx\n\n自我评价：\n\nxxxxxx"},
+                            {"role": "user",
+                                "content": f"{title},工作地点:{job_info['jobAddress']};公司名:{job_info['practiceCompanyEntity']['companyName']};"
+                                f"岗位职责:{job_info['quartersIntroduce']};公司所属行业:{job_info['practiceCompanyEntity']['tradeValue']}"}
+                        ]
+                )
+                logger.info("文章生成成功")
+                return completion.choices[0].message.content
+            except RequestException as e:
+                logger.warning(f"第 {attempt + 1} 次尝试失败: {str(e)}")
+                if attempt == max_retries - 1:
+                    logger.error(f"达到最大重试次数。最后一次错误: {str(e)}")
+                    raise ValueError(f"达到最大重试次数。最后一次错误: {str(e)}")
+                time.sleep(retry_delay)
+            except (KeyError, IndexError) as e:
+                logger.error(f"解析响应时出错: {str(e)}")
+                raise ValueError(f"解析响应时出错: {str(e)}")
+            except Exception as e:
+                logger.error(f"发生意外错误: {str(e)}")
+                raise ValueError(f"发生意外错误: {str(e)}")
+    else:
+        headers = {
+            'Authorization': f"Bearer {config.get_value('config.ai.apikey')}",
+        }
 
-    url = f"{config.get_value('config.ai.apiUrl').rstrip('/')}/v1/chat/completions"
+        data = {
+            "model": config.get_value('config.ai.model'),
+            "messages": [
+                {"role": "system",
+                "content": f"According to the information provided by the user, write an article according to the template, the reply does not allow the use of Markdown syntax, the content is in line with the job description, the content of the article is fluent, in line with the Chinese grammatical conventions,Number of characters greater than {count}"},
+                {"role": "system",
+                "content": "模板：实习地点：xxxx\n\n工作内容：\n\nxzzzx\n\n工作总结：\n\nxxxxxx\n\n遇到问题：\n\nxzzzx\n\n自我评价：\n\nxxxxxx"},
+                {"role": "user",
+                "content": f"{title},工作地点:{job_info['jobAddress']};公司名:{job_info['practiceCompanyEntity']['companyName']};"
+                            f"岗位职责:{job_info['quartersIntroduce']};公司所属行业:{job_info['practiceCompanyEntity']['tradeValue']}"}
+            ]
+        }
 
-    for attempt in range(max_retries):
-        try:
-            logger.info(f"第 {attempt + 1} 次尝试生成文章")
-            response = requests.post(url=url, headers=headers, json=data, timeout=30)
-            response.raise_for_status()
-            logger.info("文章生成成功")
-            return response.json()['choices'][0]['message']['content']
-        except RequestException as e:
-            logger.warning(f"第 {attempt + 1} 次尝试失败: {str(e)}")
-            if attempt == max_retries - 1:
-                logger.error(f"达到最大重试次数。最后一次错误: {str(e)}")
-                raise ValueError(f"达到最大重试次数。最后一次错误: {str(e)}")
-            time.sleep(retry_delay)
-        except (KeyError, IndexError) as e:
-            logger.error(f"解析响应时出错: {str(e)}")
-            raise ValueError(f"解析响应时出错: {str(e)}")
-        except Exception as e:
-            logger.error(f"发生意外错误: {str(e)}")
-            raise ValueError(f"发生意外错误: {str(e)}")
+        url = f"{config.get_value('config.ai.apiUrl').rstrip('/')}/v1/chat/completions"
 
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"第 {attempt + 1} 次尝试生成文章")
+                response = requests.post(url=url, headers=headers, json=data, timeout=30)
+                response.raise_for_status()
+                logger.info("文章生成成功")
+                return response.json()['choices'][0]['message']['content']
+            except RequestException as e:
+                logger.warning(f"第 {attempt + 1} 次尝试失败: {str(e)}")
+                if attempt == max_retries - 1:
+                    logger.error(f"达到最大重试次数。最后一次错误: {str(e)}")
+                    raise ValueError(f"达到最大重试次数。最后一次错误: {str(e)}")
+                time.sleep(retry_delay)
+            except (KeyError, IndexError) as e:
+                logger.error(f"解析响应时出错: {str(e)}")
+                raise ValueError(f"解析响应时出错: {str(e)}")
+            except Exception as e:
+                logger.error(f"发生意外错误: {str(e)}")
+                raise ValueError(f"发生意外错误: {str(e)}")
 
+    
 def upload(
         token: str,
         images: List[str],

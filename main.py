@@ -255,7 +255,7 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
     current_time = datetime.now()
     submit_day = config.get_value('config.reportSettings.weekly.submitTime')
 
-    if current_time.weekday() + 1 != submit_day or not (17 <= current_time.hour < 20):
+    if current_time.weekday() + 1 != submit_day:
         logger.info("未到周报提交时间")
         return {
             "status": "skip",
@@ -350,7 +350,7 @@ def submit_monthly_report(config: ConfigManager, api_client: ApiClient) -> Dict[
     last_day_of_month = (current_time.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
     submit_day = config.get_value('config.reportSettings.monthly.submitTime')
 
-    if current_time.day != min(submit_day, last_day_of_month.day) or not (17 <= current_time.hour < 20):
+    if current_time.day != min(submit_day, last_day_of_month.day):
         logger.info("未到月报提交时间")
         return {
             "status": "skip",
