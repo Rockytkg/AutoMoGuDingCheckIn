@@ -39,7 +39,7 @@ AutoMoGuDingCheckIn 旨在：
     ```
 
 2. 按照下面要求添加配置文件
-3. 执行
+3. 执行（linux系统，windows需要自行配置计划任务程序）
     ```bash
     chmod +x setup.sh
     bash setup.sh
