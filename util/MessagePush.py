@@ -83,14 +83,11 @@ class MessagePusher:
             "desp": content
         }
 
-        try:
-            rsp = requests.post(url, data=data).json()
-            if rsp.get("code") == 0:
-                self._logger.info("Server酱推送成功")
-            else:
-                raise Exception(rsp.get("message"))
-        except Exception as e:
-            self._logger.error(f"Server酱推送失败: {str(e)}")
+        rsp = requests.post(url, data=data).json()
+        if rsp.get("code") == 0:
+            self._logger.info("Server酱推送成功")
+        else:
+            raise Exception(rsp.get("message"))
 
     def _pushplus_push(self, config: dict[str, Any], title: str, content: str):
         """PushPlus 推送
@@ -108,14 +105,11 @@ class MessagePusher:
             "content": content
         }
 
-        try:
-            rsp = requests.post(url, data=data).json()
-            if rsp.get("code") == 200:
-                self._logger.info("PushPlus推送成功")
-            else:
-                raise Exception(rsp.get("msg"))
-        except Exception as e:
-            self._logger.error(f"PushPlus推送失败: {str(e)}")
+        rsp = requests.post(url, data=data).json()
+        if rsp.get("code") == 200:
+            self._logger.info("PushPlus推送成功")
+        else:
+            raise Exception(rsp.get("msg"))
 
     def _anpush_push(self, config: dict[str, Any], title: str, content: str):
         """AnPush 推送
@@ -135,14 +129,11 @@ class MessagePusher:
             "to": config["to"]
         }
 
-        try:
-            rsp = requests.post(url, data=data).json()
-            if rsp.get("code") == 200:
-                self._logger.info("AnPush推送成功")
-            else:
-                raise Exception(rsp.get("msg"))
-        except Exception as e:
-            self._logger.error(f"AnPush推送失败: {str(e)}")
+        rsp = requests.post(url, data=data).json()
+        if rsp.get("code") == 200:
+            self._logger.info("AnPush推送成功")
+        else:
+            raise Exception(rsp.get("msg"))
 
     def _wxpusher_push(self, config: dict[str, Any], title: str, content: str):
         """WxPusher 推送
@@ -162,14 +153,11 @@ class MessagePusher:
             "spt": config["spt"],
         }
 
-        try:
-            rsp = requests.post(url, json=data).json()
-            if rsp.get("code") == 1000:
-                self._logger.info("WxPusher推送成功")
-            else:
-                raise Exception(rsp.get("msg"))
-        except Exception as e:
-            self._logger.error(f"WxPusher推送失败: {str(e)}")
+        rsp = requests.post(url, json=data).json()
+        if rsp.get("code") == 1000:
+            self._logger.info("WxPusher推送成功")
+        else:
+            raise Exception(rsp.get("msg"))
 
     def _smtp_push(self, config: dict[str, Any], title: str, content: str):
         """SMTP 邮件推送
@@ -189,14 +177,11 @@ class MessagePusher:
         # 添加邮件内容
         msg.attach(MIMEText(content, 'html', 'utf-8'))
 
-        try:
-            with smtplib.SMTP_SSL(config["host"], config["port"]) as server:
-                server.login(config["username"], config["password"])
-                server.send_message(msg)
-                self._logger.info(f"邮件已发送成功")
-                server.quit()
-        except Exception as e:
-            self._logger.error(f"邮件发送失败：{str(e)}")
+        with smtplib.SMTP_SSL(config["host"], config["port"]) as server:
+            server.login(config["username"], config["password"])
+            server.send_message(msg)
+            self._logger.info(f"邮件已发送成功")
+            server.quit()
 
     @staticmethod
     def _generate_markdown_message(results: List[Dict[str, Any]]) -> str:
