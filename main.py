@@ -4,6 +4,7 @@ import argparse
 import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from util.Api import ApiClient, generate_article, upload
 from util.Config import ConfigManager
@@ -466,28 +467,37 @@ def run(config: ConfigManager) -> None:
     logger.info(f"执行结束：{config.get_value('userInfo.nikeName')}")
 
 
-def main(selected_files: list = None) -> None:
-    """程序主入口
-
-    :param selected_files: 选定的配置文件名（不带路径和后缀）
-    :type selected_files: list
-    """
+def execute_tasks(selected_files=None):
+    """创建任务"""
     logger.info("工学云任务开始")
 
+    # 获取用户目录下的所有 .json 文件
     json_files = {f[:-5]: f for f in os.listdir(USER_DIR) if f.endswith('.json')}
     if not json_files:
         logger.info("打卡文件未配置")
         return
 
+    # 准备需要处理的任务
+    tasks = []
     if selected_files:
         for selected_file in selected_files:
             if selected_file in json_files:
-                run(ConfigManager(os.path.join(USER_DIR, json_files[selected_file])))
+                tasks.append(os.path.join(USER_DIR, json_files[selected_file]))
             else:
                 logger.error(f"指定的文件 {selected_file}.json 不存在")
     else:
-        for filename in json_files.values():
-            run(ConfigManager(os.path.join(USER_DIR, filename)))
+        tasks = [os.path.join(USER_DIR, filename) for filename in json_files.values()]
+
+    # 使用线程池并行执行任务
+    if tasks:
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            future_to_file = {executor.submit(run, ConfigManager(task)): task for task in tasks}
+            for future in as_completed(future_to_file):
+                file_path = future_to_file[future]
+                try:
+                    future.result()
+                except Exception as e:
+                    logger.error(f"文件 {file_path} 执行时出现异常: {e}")
 
     logger.info("工学云任务结束")
 
@@ -499,4 +509,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # 执行命令
-    main(args.file)
+    execute_tasks(args.file)
