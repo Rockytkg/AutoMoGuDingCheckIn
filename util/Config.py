@@ -1,22 +1,31 @@
 import json
 import logging
 import random
-from typing import Any, Dict
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 
 class ConfigManager:
     """管理配置文件的加载、验证和更新。"""
 
-    def __init__(self, path: str):
+    def __init__(self, path: Optional[str] = None, config: Optional[Dict[str, Any]] = None):
         """
-        初始化ConfigManager实例并加载配置文件。
+        初始化ConfigManager实例。
 
         :param path: 配置文件的路径。
+        :param config: 直接传入的配置字典。如果传入此参数，则不从文件加载配置。
         """
-        self._path = Path(path)
         self._logger = logging.getLogger(__name__)
-        self._config = self._load_config()
+
+        if config is not None:
+            self._config = config
+            self._path = None
+            self._logger.info("使用直接传入的配置字典初始化")
+        elif path is not None:
+            self._path = Path(path)
+            self._config = self._load_config()
+        else:
+            raise ValueError("必须提供路径或配置字典之一")
 
     def _load_config(self) -> Dict[str, Any]:
         """
@@ -62,7 +71,7 @@ class ConfigManager:
 
     def update_config(self, value: Any, *keys: str) -> None:
         """
-        更新配置并保存。
+        更新配置并保存（如果是从文件加载的配置）。
 
         :param value: 配置的新值。
         :param keys: 配置的键名序列，用点（.）分隔。
@@ -74,7 +83,12 @@ class ConfigManager:
                 config = config.setdefault(key, {})
             # 更新或设置最后一个键名的值
             config[keys[-1]] = value
-            self._save_config()
+
+            # 如果从文件加载，则保存配置
+            if self._path is not None:
+                self._save_config()
+            else:
+                self._logger.info("配置已更新（未保存到文件，因为直接使用字典初始化）")
         except Exception as e:
             self._logger.error(f"更新配置失败: {e}")
             raise
@@ -83,6 +97,10 @@ class ConfigManager:
         """
         保存配置到文件。
         """
+        if self._path is None:
+            self._logger.warning("直接使用字典初始化时，_save_config 方法无效")
+            return
+
         try:
             with self._path.open('w', encoding='utf-8') as jsonfile:
                 json.dump(self._config, jsonfile, ensure_ascii=False, indent=2)

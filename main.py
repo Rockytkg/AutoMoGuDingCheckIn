@@ -1,10 +1,11 @@
 import logging
 import os
+import json
 import argparse
 import random
 from datetime import datetime, timedelta
-from typing import Dict, List, Any
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, List, Optional, Any
+import concurrent.futures
 
 from util.Api import ApiClient, generate_article, upload
 from util.Config import ConfigManager
@@ -442,7 +443,7 @@ def run(config: ConfigManager) -> None:
             "task_type": "API客户端初始化"
         })
         pusher.push(results)
-        logger.info("任务异常结束\n")
+        logger.info("任务异常结束")
         return
 
     logger.info(f"开始执行：{config.get_value('userInfo.nikeName')}")
@@ -467,40 +468,81 @@ def run(config: ConfigManager) -> None:
     logger.info(f"执行结束：{config.get_value('userInfo.nikeName')}")
 
 
-def execute_tasks(selected_files=None):
-    """创建任务"""
-    logger.info("工学云任务开始")
+def execute_tasks(selected_files: Optional[List[str]] = None):
+    """
+    创建并执行任务
 
-    # 获取用户目录下的所有 .json 文件
-    json_files = {f[:-5]: f for f in os.listdir(USER_DIR) if f.endswith('.json')}
-    if not json_files:
-        logger.info("打卡文件未配置")
+    :param selected_files: 可选的指定配置文件列表(不含扩展名)
+    :type selected_files: list
+    """
+    logger.info("开始执行工学云任务")
+
+    # 获取用户目录下的所有 .json 文件(不含后缀)
+    try:
+        json_files = [f[:-5] for f in os.listdir(USER_DIR) if f.endswith('.json')]
+        logger.info(f"发现 {len(json_files)} 个配置文件")
+    except OSError as e:
+        logger.error(f"扫描配置文件目录失败: {e}")
+        json_files = []
+
+    # 筛选指定的配置文件
+    if selected_files:
+        existing_files = set(selected_files) & set(json_files)
+        missing_files = set(selected_files) - existing_files
+        if missing_files:
+            logger.error(f"以下配置文件未找到: {', '.join(missing_files)}")
+        json_files = list(existing_files)
+
+    # 从环境变量获取配置
+    try:
+        user_env = os.getenv('USER', '[]')
+        user_configs = json.loads(user_env)
+        if not isinstance(user_configs, list):
+            raise ValueError("环境变量 USER 必须包含 JSON 数组")
+        logger.info(f"从环境变量中获取到 {len(user_configs)} 个配置")
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.error(f"解析环境变量 USER 失败: {e}")
+        user_configs = []
+
+    # 检查是否存在有效配置
+    if not json_files and not user_configs:
+        logger.warning("未找到任何有效配置")
         return
 
-    # 准备需要处理的任务
+    # 创建任务列表
     tasks = []
-    if selected_files:
-        for selected_file in selected_files:
-            if selected_file in json_files:
-                tasks.append(os.path.join(USER_DIR, json_files[selected_file]))
-            else:
-                logger.error(f"指定的文件 {selected_file}.json 不存在")
-    else:
-        tasks = [os.path.join(USER_DIR, filename) for filename in json_files.values()]
 
-    # 使用线程池并行执行任务
-    if tasks:
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            future_to_file = {executor.submit(run, ConfigManager(task)): task for task in tasks}
-            for future in as_completed(future_to_file):
-                file_path = future_to_file[future]
-                try:
-                    future.result()
-                except Exception as e:
-                    logger.error(f"文件 {file_path} 执行时出现异常: {e}")
+    def add_task(source, **kwargs):
+        try:
+            tasks.append(ConfigManager(**kwargs))
+            logger.debug(f"已添加来自 {source} 的任务配置")
+        except Exception as err:
+            logger.error(f"创建来自 {source} 的任务失败: {err}")
 
-    logger.info("工学云任务结束")
+    # 处理环境变量中的配置
+    for config in user_configs:
+        add_task("环境变量", config=config)
 
+    # 处理配置文件
+    for name in json_files:
+        file_path = os.path.join(USER_DIR, f"{name}.json")
+        add_task(f"配置文件 {name}", path=file_path)
+
+    if not tasks:
+        logger.error("没有成功创建任何任务")
+        return
+
+    # 执行任务
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_task = {executor.submit(run, task): task for task in tasks}
+        for future in concurrent.futures.as_completed(future_to_task):
+            task = future_to_task[future]
+            try:
+                future.result()
+            except Exception as e:
+                logger.error(f"任务 {task} 处理过程中发生错误: {e}")
+
+    logger.info("工学云任务执行结束")
 
 if __name__ == '__main__':
     # 读取命令行参数
