@@ -253,7 +253,7 @@ class ApiClient:
         :rtype: None
         :raises ValueError: 如果提交报告失败，抛出包含详细错误信息的异常。
         """
-        url = 'practice/paper/v5/save'
+        url = 'practice/paper/v6/save'
         headers = self._get_authenticated_headers(
             sign_data=[
                 self.config.get_value('userInfo.userId'),
@@ -315,11 +315,17 @@ class ApiClient:
             "compState": None,
             "apply": None,
             "levelEntity": None,
+            "formFieldDtoList": [],
+            "fieldEntityList": [],
+            "feedback": None,
+            "handleWay": None,
+            "isWarning": 0,
+            "warningType": None,
             "t": aes_encrypt(str(int(time.time() * 1000)))
         }
         self._post_request(url, headers, data, report_info.get('msg'))
 
-    def get_weeks_date(self) -> Dict[str, Any]:
+    def get_weeks_date(self) -> list[Dict[str, Any]]:
         """
         获取本周周报周期信息
 
@@ -332,7 +338,7 @@ class ApiClient:
         }
         headers = self._get_authenticated_headers()
         rsp = self._post_request(url, headers, data, '获取周报周期失败')
-        return rsp.get('data', [])[0]
+        return rsp.get('data', [])
 
     def get_checkin_info(self) -> Dict[str, Any]:
         """

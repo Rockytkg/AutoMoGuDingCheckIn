@@ -265,7 +265,7 @@ def submit_weekly_report(config: ConfigManager, api_client: ApiClient) -> Dict[s
 
     try:
         # 获取当前周信息
-        current_week_info = api_client.get_weeks_date()
+        current_week_info = api_client.get_weeks_date()[0]
 
         # 获取历史提交记录
         submitted_reports_info = api_client.get_submitted_reports_info('week')
