@@ -21,16 +21,22 @@ AutoMoGuDingCheckIn 旨在：
 - [x] 自动提交月报
 - [x] AI生成周、日、月报
 - [x] 打卡备注以及带图打卡
+- [x] Github工作流支持
 - [ ] ~~适配云函数~~
 
 ## 使用方法
 
-### 环境
+### Github工作流
+参见 [Wiki](https://github.com/Rockytkg/AutoMoGuDingCheckIn/wiki/Github-%E5%B7%A5%E4%BD%9C%E6%B5%81%E9%83%A8%E7%BD%B2)
 
-- Python 3.8+
+### 本地运行
+
+#### 环境
+
+- Python 3.10+
 - pip（Python 包管理器）
 
-### 安装
+#### 安装
 
 1. 克隆代码库：
     ```bash
@@ -45,7 +51,7 @@ AutoMoGuDingCheckIn 旨在：
     bash setup.sh
     ```
     按照脚本提示设置定时任务并执行
-### 配置
+#### 配置
 
 1. 打开user目录，根据下表修改json文件中的配置（每个文件就是一个用户）
 
@@ -224,7 +230,7 @@ AutoMoGuDingCheckIn 旨在：
     </tr>
 </table>
 
-#### 示例 JSON 配置
+##### 示例 JSON 配置
 
 ```json
 {
@@ -309,11 +315,11 @@ AutoMoGuDingCheckIn 旨在：
 }
 ```
 
-#### 图片提交说明
+##### 图片提交说明
 
 配置对应的配置项目，将图片放到images目录，运行时会自动随机抽取指定数量图片提交
 
-#### 消息推送
+##### 消息推送
 
 支持：
 
@@ -323,18 +329,18 @@ AutoMoGuDingCheckIn 旨在：
 - [WxPusher](https://wxpusher.zjiecode.com/)
 - SMTP
 
-### 运行
+#### 运行
 
 ```bash
 python main.py
 ```
 
-### 许可证
+## 许可证
 
 本项目采用 Apache 2.0 许可。详细信息请参阅 [LICENSE](https://github.com/Rockytkg/AutoMoGuDingCheckIn/blob/main/LICENSE)
 文件。
 
-### 联系方式
+## 联系方式
 
 如有任何疑问或需要支持，请通过提交 [issue](https://github.com/Rockytkg/AutoMoGuDingCheckIn/issues) 与我们联系。
 
