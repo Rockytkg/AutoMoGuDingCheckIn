@@ -112,6 +112,25 @@ def get_current_month_info() -> dict:
     return {"startTime": start_time_str, "endTime": end_time_str}
 
 
+def desensitize_name(name):
+    """
+    对姓名进行脱敏处理，将中间部分字符替换为星号。
+
+    :param name: str，待脱敏的姓名
+    :return: str，脱敏后的姓名
+    """
+    if not name or len(name) < 2:
+        return name  # 对于空字符串或单个字符，直接返回
+
+    # 计算脱敏的字符数
+    first_char = name[0]  # 姓名的第一个字符
+    last_char = name[-1]  # 姓名的最后一个字符
+    middle_length = len(name) - 2  # 中间部分的长度
+
+    # 生成脱敏后的姓名
+    return f"{first_char}{'*' * middle_length}{last_char}"
+
+
 def calculate_precise_slider_distance(target_start_x: int, target_end_x: int, slider_width: int) -> float:
     """
     计算滑块需要移动的精确距离，并添加微小随机偏移。
@@ -192,7 +211,7 @@ def slide_match(target_bytes: bytes = None, background_bytes: bytes = None) -> l
     :rtype: list
     """
     target = cv2.imdecode(np.frombuffer(target_bytes, np.uint8), cv2.IMREAD_ANYCOLOR)
-    
+
     background = cv2.imdecode(np.frombuffer(background_bytes, np.uint8), cv2.IMREAD_ANYCOLOR)
 
     background = cv2.Canny(background, 100, 200)
@@ -205,4 +224,4 @@ def slide_match(target_bytes: bytes = None, background_bytes: bytes = None) -> l
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
     h, w = target.shape[:2]
     bottom_right = (max_loc[0] + w, max_loc[1] + h)
-    return [int(max_loc[0]),int(bottom_right[0])]
+    return [int(max_loc[0]), int(bottom_right[0])]

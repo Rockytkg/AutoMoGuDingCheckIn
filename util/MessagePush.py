@@ -193,7 +193,7 @@ class MessagePusher:
             with smtplib.SMTP_SSL(config["host"], config["port"]) as server:
                 server.login(config["username"], config["password"])
                 server.send_message(msg)
-                self._logger.info(f"邮件已发送至： {config['to']}")
+                self._logger.info(f"邮件已发送成功")
                 server.quit()
         except Exception as e:
             self._logger.error(f"邮件发送失败：{str(e)}")

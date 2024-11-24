@@ -10,6 +10,7 @@ import concurrent.futures
 from util.Api import ApiClient, generate_article, upload
 from util.Config import ConfigManager
 from util.MessagePush import MessagePusher
+from  util.Tool import desensitize_name
 
 # 配置日志
 logging.basicConfig(
@@ -115,7 +116,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
                     "task_type": "打卡"
                 }
 
-        user_name = config.get_value('userInfo.nikeName')
+        user_name = desensitize_name(config.get_value('userInfo.nikeName'))
         logger.info(f'用户 {user_name} 开始 {display_type} 打卡')
 
         # 打卡图片和备注
@@ -446,7 +447,7 @@ def run(config: ConfigManager) -> None:
         logger.info("任务异常结束")
         return
 
-    logger.info(f"开始执行：{config.get_value('userInfo.nikeName')}")
+    logger.info(f"开始执行：{desensitize_name(config.get_value('userInfo.nikeName'))}")
 
     try:
         results = [
@@ -465,7 +466,7 @@ def run(config: ConfigManager) -> None:
         })
 
     pusher.push(results)
-    logger.info(f"执行结束：{config.get_value('userInfo.nikeName')}")
+    logger.info(f"执行结束：{desensitize_name(config.get_value('userInfo.nikeName'))}")
 
 
 def execute_tasks(selected_files: Optional[List[str]] = None):
