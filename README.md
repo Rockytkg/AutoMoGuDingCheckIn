@@ -38,11 +38,13 @@ AutoMoGuDingCheckIn 旨在：
     cd AutoMoGuDingCheckIn
     ```
 
-2. 安装依赖：
+2. 按照下面要求添加配置文件
+3. 执行（linux系统，windows需要自行配置计划任务程序）
     ```bash
-    pip install -r requirements.txt
+    chmod +x setup.sh
+    bash setup.sh
     ```
-
+    按照脚本提示设置定时任务并执行
 ### 配置
 
 1. 打开user目录，根据下表修改json文件中的配置（每个文件就是一个用户）
