@@ -1,0 +1,36 @@
+name: "打卡"
+
+on:
+  workflow_dispatch: # 手动触发
+  schedule:
+    # 定时任务：UTC 时间对应北京时间 -8 小时
+    - cron: "0 0 * * *"  # 北京时间 8:00
+    - cron: "0 1 * * *"  # 北京时间 9:00
+    - cron: "0 9 * * *"  # 北京时间 17:00
+    - cron: "0 10 * * *" # 北京时间 18:00
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 检出代码仓库
+      - uses: actions/checkout@v3
+      
+      # 设置 Python 环境
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+        
+      # 安装依赖
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      # 执行任务
+      - name: Start sign
+        env:
+          USER: ${{ secrets.USER }}
+        run: |
+          python main.py
