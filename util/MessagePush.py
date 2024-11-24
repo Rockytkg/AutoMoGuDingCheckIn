@@ -66,6 +66,7 @@ class MessagePusher:
 
                 except Exception as e:
                     self._logger.error(f"{service_type} 消息推送失败: {str(e)}")
+                    continue
 
     def _server_push(self, config: dict[str, Any], title: str, content: str):
         """Server酱 推送
