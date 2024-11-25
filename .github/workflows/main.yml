@@ -4,7 +4,7 @@ name: "打卡"
 on:
   workflow_dispatch:  # 手动触发
   schedule:
-    # 使用 UTC 时间，及北京时间 -8 小时
+    # 使用 UTC 时间，UTC 时间 对应 北京时间 -8 小时
     - cron: "0 0 * * *"  # UTC 00:00 / 北京时间 08:00
     - cron: "0 1 * * *"  # UTC 01:00 / 北京时间 09:00
     - cron: "0 9 * * *"  # UTC 09:00 / 北京时间 17:00
@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 10  # 添加超时限制
 
     steps:
-      # 设置时区为北京时区
+      # 设置时区为 Asia/Shanghai
       - name: Set timezone
         uses: szenius/set-timezone@v2.0
         with:
