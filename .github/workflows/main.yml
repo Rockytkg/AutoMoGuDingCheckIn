@@ -1,17 +1,24 @@
 name: "打卡"
 
+# 明确触发条件
 on:
-  workflow_dispatch: # 手动触发
+  workflow_dispatch:  # 手动触发
   schedule:
-    # 定时任务：UTC 时间对应北京时间 -8 小时
-    - cron: "0 0 * * *"  # 北京时间 8:00
-    - cron: "0 1 * * *"  # 北京时间 9:00
-    - cron: "0 9 * * *"  # 北京时间 17:00
-    - cron: "0 10 * * *" # 北京时间 18:00
+    # 使用 UTC 时间，及北京时间 -8 小时
+    - cron: "0 0 * * *"  # UTC 00:00 / 北京时间 08:00
+    - cron: "0 1 * * *"  # UTC 01:00 / 北京时间 09:00
+    - cron: "0 9 * * *"  # UTC 09:00 / 北京时间 17:00
+    - cron: "0 10 * * *" # UTC 10:00 / 北京时间 18:00
+
+# 配置并发控制，避免任务重叠执行
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # 添加超时限制
 
     steps:
       # 设置时区为北京时区
@@ -19,24 +26,40 @@ jobs:
         uses: szenius/set-timezone@v2.0
         with:
           timezoneLinux: "Asia/Shanghai"
-      
+
       # 检出代码仓库
-      - uses: actions/checkout@v3
-      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # 优化克隆深度
+
       # 设置 Python 环境
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-        
+          cache: 'pip'  # 启用 pip 缓存
+          check-latest: true  # 检查是否有更新的补丁版本
+
+      # 缓存 pip 依赖
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       # 安装依赖
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       # 执行任务
-      - name: Start sign
+      - name: Run sign in script
         env:
           USER: ${{ secrets.USER }}
+          TZ: Asia/Shanghai  # 确保脚本运行时也使用正确的时区
         run: |
           python main.py
