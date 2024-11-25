@@ -1,95 +1,42 @@
 name: "打卡"
 
-# 触发条件
 on:
-  workflow_dispatch:  # 允许手动触发工作流
-  schedule:          # 设置自动触发时间
-    - cron: "0 0 * * *"  # UTC 00:00 / 北京时间 08:00
-    - cron: "0 1 * * *"  # UTC 01:00 / 北京时间 09:00
-    - cron: "0 9 * * *"  # UTC 09:00 / 北京时间 17:00
-    - cron: "0 10 * * *" # UTC 10:00 / 北京时间 18:00
-  
-# 配置并发控制，防止多个工作流同时运行
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_dispatch: # 手动触发
+  schedule:
+    # 定时任务：UTC 时间对应北京时间 -8 小时
+    - cron: "0 0 * * *"  # 北京时间 8:00
+    - cron: "0 1 * * *"  # 北京时间 9:00
+    - cron: "0 9 * * *"  # 北京时间 17:00
+    - cron: "0 10 * * *" # 北京时间 18:00
 
 jobs:
-  # 同步上游仓库更新的任务
-  sync:
+  build:
     runs-on: ubuntu-latest
-    steps:
-      # 检出当前仓库代码
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # 获取完整的 git 历史
-          token: ${{ secrets.GITHUB_TOKEN }}  # 使用 GitHub 提供的 token
-          
-      # 配置 Git 用户信息
-      - name: Configure Git
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          
-      # 同步上游仓库更新
-      - name: Sync upstream repository
-        run: |
-          # 添加上游仓库
-          git remote add upstream https://github.com/Rockytkg/AutoMoGuDingCheckIn.git
-          # 获取上游仓库的更新
-          git fetch upstream
-          # 合并上游更新到当前分支
-          git merge upstream/main --no-edit || true
-          # 推送更新到自己的仓库
-          git push origin main || echo "No changes to push"
-        
-  # 打卡任务，依赖于同步任务完成
-  sign:
-    needs: sync  # 确保在同步任务完成后执行
-    runs-on: ubuntu-latest
-    timeout-minutes: 10  # 设置超时时间
 
     steps:
-      # 设置时区为中国时区
+      # 设置时区为北京时区
       - name: Set timezone
         uses: szenius/set-timezone@v2.0
         with:
           timezoneLinux: "Asia/Shanghai"
       
-      # 检出仓库代码
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1  # 仅获取最新的提交
+      # 检出代码仓库
+      - uses: actions/checkout@v3
       
       # 设置 Python 环境
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-          cache: 'pip'  # 启用 pip 缓存
-          check-latest: true  # 检查最新版本
-      
-      # 缓存 pip 包，加快安装速度
-      - name: Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      
-      # 安装 Python 依赖
+        
+      # 安装依赖
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
-      
-      # 运行打卡脚本
-      - name: Run sign in script
+
+      # 执行任务
+      - name: Start sign
         env:
-          USER: ${{ secrets.USER }}  # 使用 GitHub Secrets 中的用户信息
-          TZ: Asia/Shanghai  # 设置时区环境变量
+          USER: ${{ secrets.USER }}
         run: |
           python main.py
