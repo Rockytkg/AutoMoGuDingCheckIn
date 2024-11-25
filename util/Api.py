@@ -89,7 +89,7 @@ class ApiClient:
                 return rsp
 
             if 'token失效' in rsp.get('msg', '未知错误') and retry_count < self.max_retries:
-                wait_time = 0.3 * (2 ** retry_count)
+                wait_time = 1 * (2 ** retry_count)
                 time.sleep(wait_time)
                 logger.warning('Token失效，正在重新登录...')
                 self.login()
