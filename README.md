@@ -26,8 +26,10 @@ AutoMoGuDingCheckIn 旨在：
 
 ## 使用方法
 
-### Github工作流
+### Github工作流（免服务器部署）
 参见 [Wiki](https://github.com/Rockytkg/AutoMoGuDingCheckIn/wiki/Github-%E5%B7%A5%E4%BD%9C%E6%B5%81%E9%83%A8%E7%BD%B2)
+
+**切记不要将配置文件上传到公开仓库，否则会造成信息泄露。请使用环境变量！！！，已经泄露请立刻修改工学云密码！！！**
 
 ### 本地运行
 
