@@ -102,7 +102,7 @@ class ApiClient:
             if re.search(r'[\u4e00-\u9fff]', str(e)) or retry_count >= self.max_retries:
                 raise ValueError(f'{msg}，{str(e)}')
 
-            wait_time = 0.3 * (2 ** retry_count)
+            wait_time = 1 * (2 ** retry_count)
             logger.warning(f"{msg}: 重试 {retry_count + 1}/{self.max_retries}，等待 {wait_time:.2f} 秒")
             time.sleep(wait_time)
 
