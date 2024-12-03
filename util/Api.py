@@ -13,23 +13,29 @@ from requests.exceptions import RequestException
 from PIL import Image
 
 from util.Config import ConfigManager
-from util.Tool import create_sign, aes_encrypt, aes_decrypt, get_current_month_info, recognize_captcha
+from util.Tool import (
+    create_sign,
+    aes_encrypt,
+    aes_decrypt,
+    get_current_month_info,
+    recognize_captcha,
+)
 
 # 常量
-BASE_URL = 'https://api.moguding.net:9000/'
+BASE_URL = "https://api.moguding.net:9000/"
 HEADERS = {
-    'user-agent': 'Dart/2.17 (dart:io)',
-    'content-type': 'application/json; charset=utf-8',
-    'accept-encoding': 'gzip',
-    'host': 'api.moguding.net:9000'
+    "user-agent": "Dart/2.17 (dart:io)",
+    "content-type": "application/json; charset=utf-8",
+    "accept-encoding": "gzip",
+    "host": "api.moguding.net:9000",
 }
 
 logging.basicConfig(
-    format='[%(asctime)s] %(name)s %(levelname)s: %(message)s',
+    format="[%(asctime)s] %(name)s %(levelname)s: %(message)s",
     level=logging.INFO,
-    datefmt='%Y-%m-%d %I:%M:%S'
+    datefmt="%Y-%m-%d %I:%M:%S",
 )
-logger = logging.getLogger('ApiModule')
+logger = logging.getLogger("ApiModule")
 
 
 class ApiClient:
@@ -53,12 +59,12 @@ class ApiClient:
         self.max_retries = 5  # 控制重新尝试的次数
 
     def _post_request(
-            self,
-            url: str,
-            headers: Dict[str, str],
-            data: Dict[str, Any],
-            msg: str = '请求失败',
-            retry_count: int = 0
+        self,
+        url: str,
+        headers: Dict[str, str],
+        data: Dict[str, Any],
+        msg: str = "请求失败",
+        retry_count: int = 0,
     ) -> Dict[str, Any]:
         """
         发送POST请求，并处理请求过程中可能发生的错误。
@@ -81,29 +87,36 @@ class ApiClient:
         :raises ValueError: 如果请求失败或响应包含错误信息，则抛出包含详细错误信息的异常。
         """
         try:
-            response = requests.post(f'{BASE_URL}{url}', headers=headers, json=data, timeout=10)
+            response = requests.post(
+                f"{BASE_URL}{url}", headers=headers, json=data, timeout=10
+            )
             response.raise_for_status()
             rsp = response.json()
 
-            if rsp.get('code') == 200 or rsp.get('code') == 6111:
+            if rsp.get("code") == 200 or rsp.get("code") == 6111:
                 return rsp
 
-            if 'token失效' in rsp.get('msg', '未知错误') and retry_count < self.max_retries:
-                wait_time = 1 * (2 ** retry_count)
+            if (
+                "token失效" in rsp.get("msg", "未知错误")
+                and retry_count < self.max_retries
+            ):
+                wait_time = 1 * (2**retry_count)
                 time.sleep(wait_time)
-                logger.warning('Token失效，正在重新登录...')
+                logger.warning("Token失效，正在重新登录...")
                 self.login()
-                headers['authorization'] = self.config.get_value('userInfo.token')
+                headers["authorization"] = self.config.get_value("userInfo.token")
                 return self._post_request(url, headers, data, msg, retry_count + 1)
             else:
-                raise ValueError(rsp.get('msg','未知错误'))
+                raise ValueError(rsp.get("msg", "未知错误"))
 
         except (requests.RequestException, ValueError) as e:
-            if re.search(r'[\u4e00-\u9fff]', str(e)) or retry_count >= self.max_retries:
-                raise ValueError(f'{msg}，{str(e)}')
+            if re.search(r"[\u4e00-\u9fff]", str(e)) or retry_count >= self.max_retries:
+                raise ValueError(f"{msg}，{str(e)}")
 
-            wait_time = 1 * (2 ** retry_count)
-            logger.warning(f"{msg}: 重试 {retry_count + 1}/{self.max_retries}，等待 {wait_time:.2f} 秒")
+            wait_time = 1 * (2**retry_count)
+            logger.warning(
+                f"{msg}: 重试 {retry_count + 1}/{self.max_retries}，等待 {wait_time:.2f} 秒"
+            )
             time.sleep(wait_time)
 
         return self._post_request(url, headers, data, msg, retry_count + 1)
@@ -121,30 +134,34 @@ class ApiClient:
         attempts = 0
         while attempts < max_attempts:
             time.sleep(random.uniform(0.5, 0.7))
-            captcha_url = 'session/captcha/v1/get'
+            captcha_url = "session/captcha/v1/get"
             request_data = {
-                "clientUid": str(uuid.uuid4()).replace('-', ''),
-                "captchaType": "blockPuzzle"
+                "clientUid": str(uuid.uuid4()).replace("-", ""),
+                "captchaType": "blockPuzzle",
             }
-            captcha_info = self._post_request(captcha_url, HEADERS, request_data, '获取验证码失败')
-            slider_data = recognize_captcha(captcha_info['data']['jigsawImageBase64'],
-                                            captcha_info['data']['originalImageBase64'])
-            check_slider_url = 'session/captcha/v1/check'
+            captcha_info = self._post_request(
+                captcha_url, HEADERS, request_data, "获取验证码失败"
+            )
+            slider_data = recognize_captcha(
+                captcha_info["data"]["jigsawImageBase64"],
+                captcha_info["data"]["originalImageBase64"],
+            )
+            check_slider_url = "session/captcha/v1/check"
             check_slider_data = {
                 "pointJson": aes_encrypt(
-                    slider_data,
-                    captcha_info['data']['secretKey'],
-                    'b64'
+                    slider_data, captcha_info["data"]["secretKey"], "b64"
                 ),
-                "token": captcha_info['data']['token'],
-                "captchaType": "blockPuzzle"
+                "token": captcha_info["data"]["token"],
+                "captchaType": "blockPuzzle",
             }
-            check_result = self._post_request(check_slider_url, HEADERS, check_slider_data, '验证验证码失败')
-            if check_result.get('code') != 6111:
+            check_result = self._post_request(
+                check_slider_url, HEADERS, check_slider_data, "验证验证码失败"
+            )
+            if check_result.get("code") != 6111:
                 return aes_encrypt(
-                    captcha_info['data']['token'] + '---' + slider_data,
-                    captcha_info['data']['secretKey'],
-                    'b64'
+                    captcha_info["data"]["token"] + "---" + slider_data,
+                    captcha_info["data"]["secretKey"],
+                    "b64",
                 )
             attempts += 1
         raise Exception("验证码验证失败超过最大尝试次数")
@@ -157,20 +174,20 @@ class ApiClient:
 
         :raises ValueError: 如果登录请求失败，抛出包含详细错误信息的异常。
         """
-        url = 'session/user/v6/login'
+        url = "session/user/v6/login"
         data = {
-            'phone': aes_encrypt(self.config.get_value('config.user.phone')),
-            'password': aes_encrypt(self.config.get_value('config.user.password')),
-            'captcha': self.pass_captcha(),
-            'loginType': 'android',
-            'uuid': str(uuid.uuid4()).replace('-', ''),
-            'device': 'android',
-            'version': '5.15.0',
-            't': aes_encrypt(str(int(time.time() * 1000)))
+            "phone": aes_encrypt(self.config.get_value("config.user.phone")),
+            "password": aes_encrypt(self.config.get_value("config.user.password")),
+            "captcha": self.pass_captcha(),
+            "loginType": "android",
+            "uuid": str(uuid.uuid4()).replace("-", ""),
+            "device": "android",
+            "version": "5.15.0",
+            "t": aes_encrypt(str(int(time.time() * 1000))),
         }
-        rsp = self._post_request(url, HEADERS, data, '登陆失败')
-        user_info = json.loads(aes_decrypt(rsp.get('data', '')))
-        self.config.update_config(user_info, 'userInfo')
+        rsp = self._post_request(url, HEADERS, data, "登陆失败")
+        user_info = json.loads(aes_decrypt(rsp.get("data", "")))
+        self.config.update_config(user_info, "userInfo")
 
     def fetch_internship_plan(self) -> None:
         """
@@ -180,20 +197,17 @@ class ApiClient:
 
         :raises ValueError: 如果获取实习计划失败，抛出包含详细错误信息的异常。
         """
-        url = 'practice/plan/v3/getPlanByStu'
-        data = {
-            "pageSize": 999999,
-            "t": aes_encrypt(str(int(time.time() * 1000)))
-        }
+        url = "practice/plan/v3/getPlanByStu"
+        data = {"pageSize": 999999, "t": aes_encrypt(str(int(time.time() * 1000)))}
         headers = self._get_authenticated_headers(
             sign_data=[
-                self.config.get_value('userInfo.userId'),
-                self.config.get_value('userInfo.roleKey')
+                self.config.get_value("userInfo.userId"),
+                self.config.get_value("userInfo.roleKey"),
             ]
         )
-        rsp = self._post_request(url, headers, data, '获取planID失败')
-        plan_info = rsp.get('data', [{}])[0]
-        self.config.update_config(plan_info, 'planInfo')
+        rsp = self._post_request(url, headers, data, "获取planID失败")
+        plan_info = rsp.get("data", [{}])[0]
+        self.config.update_config(plan_info, "planInfo")
 
     def get_job_info(self) -> Dict[str, Any]:
         """
@@ -206,14 +220,14 @@ class ApiClient:
 
         :raises ValueError: 如果获取岗位信息失败，抛出包含详细错误信息的异常。
         """
-        url = 'practice/job/v4/infoByStu'
+        url = "practice/job/v4/infoByStu"
         data = {
-            "planId": self.config.get_value('planInfo.planId'),
-            "t": aes_encrypt(str(int(time.time() * 1000)))
+            "planId": self.config.get_value("planInfo.planId"),
+            "t": aes_encrypt(str(int(time.time() * 1000))),
         }
         headers = self._get_authenticated_headers()
-        rsp = self._post_request(url, headers, data, '获取岗位信息失败')
-        return rsp.get('data', {})
+        rsp = self._post_request(url, headers, data, "获取岗位信息失败")
+        return rsp.get("data", {})
 
     def get_submitted_reports_info(self, report_type: str) -> Dict[str, Any]:
         """
@@ -225,22 +239,22 @@ class ApiClient:
         :rtype: dict
         :raises ValueError: 如果获取数量失败，抛出包含详细错误信息的异常。
         """
-        url = 'practice/paper/v2/listByStu'
+        url = "practice/paper/v2/listByStu"
         data = {
             "currPage": 1,
             "pageSize": 10,
             "reportType": report_type,
-            "planId": self.config.get_value('planInfo.planId'),
-            "t": aes_encrypt(str(int(time.time() * 1000)))
+            "planId": self.config.get_value("planInfo.planId"),
+            "t": aes_encrypt(str(int(time.time() * 1000))),
         }
         headers = self._get_authenticated_headers(
             sign_data=[
-                self.config.get_value('userInfo.userId'),
-                self.config.get_value('userInfo.roleKey'),
-                report_type
+                self.config.get_value("userInfo.userId"),
+                self.config.get_value("userInfo.roleKey"),
+                report_type,
             ]
         )
-        rsp = self._post_request(url, headers, data, '获取报告列表失败')
+        rsp = self._post_request(url, headers, data, "获取报告列表失败")
         return rsp
 
     def submit_report(self, report_info: Dict[str, Any]) -> None:
@@ -253,13 +267,13 @@ class ApiClient:
         :rtype: None
         :raises ValueError: 如果提交报告失败，抛出包含详细错误信息的异常。
         """
-        url = 'practice/paper/v6/save'
+        url = "practice/paper/v6/save"
         headers = self._get_authenticated_headers(
             sign_data=[
-                self.config.get_value('userInfo.userId'),
-                report_info.get('reportType'),
-                self.config.get_value('planInfo.planId'),
-                report_info.get('title'),
+                self.config.get_value("userInfo.userId"),
+                report_info.get("reportType"),
+                self.config.get_value("planInfo.planId"),
+                report_info.get("title"),
             ]
         )
         data = {
@@ -269,41 +283,41 @@ class ApiClient:
             "attachmentList": None,
             "commentNum": None,
             "commentContent": None,
-            "content": report_info.get('content'),
+            "content": report_info.get("content"),
             "createBy": None,
             "createTime": None,
             "depName": None,
             "reject": None,
-            "endTime": report_info.get('endTime', None),
+            "endTime": report_info.get("endTime", None),
             "headImg": None,
-            "yearmonth": report_info.get('yearmonth', None),
+            "yearmonth": report_info.get("yearmonth", None),
             "imageList": None,
             "isFine": None,
             "latitude": None,
             "gpmsSchoolYear": None,
             "longitude": None,
-            "planId": self.config.get_value('planInfo.planId'),
+            "planId": self.config.get_value("planInfo.planId"),
             "planName": None,
             "reportId": None,
-            "reportType": report_info.get('reportType'),
-            "reportTime": report_info.get('reportTime', None),
+            "reportType": report_info.get("reportType"),
+            "reportTime": report_info.get("reportTime", None),
             "isOnTime": None,
             "schoolId": None,
-            "startTime": report_info.get('startTime', None),
+            "startTime": report_info.get("startTime", None),
             "state": None,
             "studentId": None,
             "studentNumber": None,
             "supportNum": None,
-            "title": report_info.get('title'),
+            "title": report_info.get("title"),
             "url": None,
             "username": None,
-            "weeks": report_info.get('weeks', None),
+            "weeks": report_info.get("weeks", None),
             "videoUrl": None,
             "videoTitle": None,
-            "attachments": report_info.get('attachments', ''),
+            "attachments": report_info.get("attachments", ""),
             "companyName": None,
             "jobName": None,
-            "jobId": report_info.get('jobId', ''),
+            "jobId": report_info.get("jobId", ""),
             "score": None,
             "tpJobId": None,
             "starNum": None,
@@ -321,9 +335,9 @@ class ApiClient:
             "handleWay": None,
             "isWarning": 0,
             "warningType": None,
-            "t": aes_encrypt(str(int(time.time() * 1000)))
+            "t": aes_encrypt(str(int(time.time() * 1000))),
         }
-        self._post_request(url, headers, data, report_info.get('msg'))
+        self._post_request(url, headers, data, report_info.get("msg"))
 
     def get_weeks_date(self) -> list[Dict[str, Any]]:
         """
@@ -332,13 +346,11 @@ class ApiClient:
         :return: 包含周报周报周期信息的字典。
         :rtype: dict
         """
-        url = 'practice/paper/v3/getWeeks1'
-        data = {
-            "t": aes_encrypt(str(int(time.time() * 1000)))
-        }
+        url = "practice/paper/v3/getWeeks1"
+        data = {"t": aes_encrypt(str(int(time.time() * 1000)))}
         headers = self._get_authenticated_headers()
-        rsp = self._post_request(url, headers, data, '获取周报周期失败')
-        return rsp.get('data', [])
+        rsp = self._post_request(url, headers, data, "获取周报周期失败")
+        return rsp.get("data", [])
 
     def get_checkin_info(self) -> Dict[str, Any]:
         """
@@ -351,15 +363,15 @@ class ApiClient:
 
         :raises ValueError: 如果获取打卡信息失败，抛出包含详细错误信息的异常。
         """
-        url = 'attendence/clock/v2/listSynchro'
+        url = "attendence/clock/v2/listSynchro"
         headers = self._get_authenticated_headers()
         data = {
             **get_current_month_info(),
-            "t": aes_encrypt(str(int(time.time() * 1000)))
+            "t": aes_encrypt(str(int(time.time() * 1000))),
         }
-        rsp = self._post_request(url, headers, data, '获取打卡信息失败')
+        rsp = self._post_request(url, headers, data, "获取打卡信息失败")
         # 每月第一天的第一次打卡返回的是空，所以特殊处理返回空字典
-        return rsp.get('data', [{}])[0] if rsp.get('data') else {}
+        return rsp.get("data", [{}])[0] if rsp.get("data") else {}
 
     def submit_clock_in(self, checkin_info: Dict[str, Any]) -> None:
         """
@@ -372,20 +384,20 @@ class ApiClient:
 
         :raises ValueError: 如果打卡提交失败，抛出包含详细错误信息的异常。
         """
-        url = 'attendence/clock/v4/save'
+        url = "attendence/clock/v4/save"
         logger.info(f'打卡类型：{checkin_info.get("type")}')
 
         data = {
             "distance": None,
             "content": None,
             "lastAddress": None,
-            "lastDetailAddress": checkin_info.get('lastDetailAddress'),
+            "lastDetailAddress": checkin_info.get("lastDetailAddress"),
             "attendanceId": None,
             "country": "中国",
             "createBy": None,
             "createTime": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-            "description": checkin_info.get('description', None),
-            "device": self.config.get_value('config.device'),
+            "description": checkin_info.get("description", None),
+            "device": self.config.get_value("config.device"),
             "images": None,
             "isDeleted": None,
             "isReplace": None,
@@ -395,13 +407,13 @@ class ApiClient:
             "state": "NORMAL",
             "teacherId": None,
             "teacherNumber": None,
-            "type": checkin_info.get('type'),
+            "type": checkin_info.get("type"),
             "stuId": None,
-            "planId": self.config.get_value('planInfo.planId'),
+            "planId": self.config.get_value("planInfo.planId"),
             "attendanceType": None,
             "username": None,
-            "attachments": checkin_info.get('attachments', None),
-            "userId": self.config.get_value('userInfo.userId'),
+            "attachments": checkin_info.get("attachments", None),
+            "userId": self.config.get_value("userInfo.userId"),
             "isSYN": None,
             "studentId": None,
             "applyState": None,
@@ -416,22 +428,22 @@ class ApiClient:
             "isBeyondFence": None,
             "practiceAddress": None,
             "tpJobId": None,
-            "t": aes_encrypt(str(int(time.time() * 1000)))
+            "t": aes_encrypt(str(int(time.time() * 1000))),
         }
 
-        data.update(self.config.get_value('config.clockIn.location'))
+        data.update(self.config.get_value("config.clockIn.location"))
 
         headers = self._get_authenticated_headers(
             sign_data=[
-                self.config.get_value('config.device'),
-                checkin_info.get('type'),
-                self.config.get_value('planInfo.planId'),
-                self.config.get_value('userInfo.userId'),
-                self.config.get_value('config.clockIn.location.address')
+                self.config.get_value("config.device"),
+                checkin_info.get("type"),
+                self.config.get_value("planInfo.planId"),
+                self.config.get_value("userInfo.userId"),
+                self.config.get_value("config.clockIn.location.address"),
             ]
         )
 
-        self._post_request(url, headers, data, '打卡失败')
+        self._post_request(url, headers, data, "打卡失败")
 
     def get_upload_token(self) -> str:
         """
@@ -442,17 +454,14 @@ class ApiClient:
         :return: 上传文件的认证令牌。
         :rtype: str
         """
-        url = 'session/upload/v1/token'
+        url = "session/upload/v1/token"
         headers = self._get_authenticated_headers()
-        data = {
-            "t": aes_encrypt(str(int(time.time() * 1000)))
-        }
-        rsp = self._post_request(url, headers, data, '获取上传文件的认证令牌失败')
-        return rsp.get('data', '')
+        data = {"t": aes_encrypt(str(int(time.time() * 1000)))}
+        rsp = self._post_request(url, headers, data, "获取上传文件的认证令牌失败")
+        return rsp.get("data", "")
 
     def _get_authenticated_headers(
-            self,
-            sign_data: Optional[List[str]] = None
+        self, sign_data: Optional[List[str]] = None
     ) -> Dict[str, str]:
         """
         生成带有认证信息的请求头。
@@ -468,22 +477,22 @@ class ApiClient:
         """
         headers = {
             **HEADERS,
-            'authorization': self.config.get_value('userInfo.token'),
-            'userid': self.config.get_value('userInfo.userId'),
-            'rolekey': self.config.get_value('userInfo.roleKey'),
+            "authorization": self.config.get_value("userInfo.token"),
+            "userid": self.config.get_value("userInfo.userId"),
+            "rolekey": self.config.get_value("userInfo.roleKey"),
         }
         if sign_data:
-            headers['sign'] = create_sign(*sign_data)
+            headers["sign"] = create_sign(*sign_data)
         return headers
 
 
 def generate_article(
-        config: ConfigManager,
-        title: str,
-        job_info: Dict[str, Any],
-        count: int = 500,
-        max_retries: int = 3,
-        retry_delay: int = 1
+    config: ConfigManager,
+    title: str,
+    job_info: Dict[str, Any],
+    count: int = 500,
+    max_retries: int = 3,
+    retry_delay: int = 1,
 ) -> str:
     """
     生成日报、周报、月报
@@ -504,20 +513,26 @@ def generate_article(
     :rtype: str
     """
     headers = {
-        'Authorization': f"Bearer {config.get_value('config.ai.apikey')}",
+        "Authorization": f"Bearer {config.get_value('config.ai.apikey')}",
     }
 
     data = {
-        "model": config.get_value('config.ai.model'),
+        "model": config.get_value("config.ai.model"),
         "messages": [
-            {"role": "system",
-             "content": f"According to the information provided by the user, write an article according to the template, the reply does not allow the use of Markdown syntax, the content is in line with the job description, the content of the article is fluent, in line with the Chinese grammatical conventions,Number of characters greater than {count}"},
-            {"role": "system",
-             "content": "模板：实习地点：xxxx\n\n工作内容：\n\nxzzzx\n\n工作总结：\n\nxxxxxx\n\n遇到问题：\n\nxzzzx\n\n自我评价：\n\nxxxxxx"},
-            {"role": "user",
-             "content": f"{title},工作地点:{job_info['jobAddress']};公司名:{job_info['practiceCompanyEntity']['companyName']};"
-                        f"岗位职责:{job_info['quartersIntroduce']};公司所属行业:{job_info['practiceCompanyEntity']['tradeValue']}"}
-        ]
+            {
+                "role": "system",
+                "content": f"According to the information provided by the user, write an article according to the template, the reply does not allow the use of Markdown syntax, the content is in line with the job description, the content of the article is fluent, in line with the Chinese grammatical conventions,Number of characters greater than {count}",
+            },
+            {
+                "role": "system",
+                "content": "模板：实习地点：xxxx\n\n工作内容：\n\nxzzzx\n\n工作总结：\n\nxxxxxx\n\n遇到问题：\n\nxzzzx\n\n自我评价：\n\nxxxxxx",
+            },
+            {
+                "role": "user",
+                "content": f"{title},工作地点:{job_info['jobAddress']};公司名:{job_info['practiceCompanyEntity']['companyName']};"
+                f"岗位职责:{job_info['quartersIntroduce']};公司所属行业:{job_info['practiceCompanyEntity']['tradeValue']}",
+            },
+        ],
     }
 
     url = f"{config.get_value('config.ai.apiUrl').rstrip('/')}/v1/chat/completions"
@@ -528,7 +543,7 @@ def generate_article(
             response = requests.post(url=url, headers=headers, json=data, timeout=30)
             response.raise_for_status()
             logger.info("文章生成成功")
-            return response.json()['choices'][0]['message']['content']
+            return response.json()["choices"][0]["message"]["content"]
         except RequestException as e:
             logger.warning(f"第 {attempt + 1} 次尝试失败: {str(e)}")
             if attempt == max_retries - 1:
@@ -544,11 +559,11 @@ def generate_article(
 
 
 def upload(
-        token: str,
-        images: List[str],
-        config: ConfigManager,
-        max_retries: int = 3,
-        retry_delay: int = 1
+    token: str,
+    images: List[str],
+    config: ConfigManager,
+    max_retries: int = 3,
+    retry_delay: int = 1,
 ) -> str:
     """
     上传图片（支持一次性上传多张图片）
@@ -566,11 +581,11 @@ def upload(
     :return: 成功上传的图片链接，用逗号分隔
     :rtype: str
     """
-    url = 'https://up.qiniup.com/'
+    url = "https://up.qiniup.com/"
     headers = {
-        'host': 'up.qiniup.com',
-        'accept-encoding': 'gzip',
-        'user-agent': 'Dart / 2.17(dart:io)'
+        "host": "up.qiniup.com",
+        "accept-encoding": "gzip",
+        "user-agent": "Dart / 2.17(dart:io)",
     }
 
     successful_keys = []
@@ -579,42 +594,48 @@ def upload(
         for attempt in range(max_retries):
             try:
                 # 使用临时文件处理图片
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+                with tempfile.NamedTemporaryFile(
+                    delete=False, suffix=".jpg"
+                ) as temp_file:
                     # 打开并转换图片为JPG格式
                     with Image.open(image_path) as img:
                         # 如果图片大于1MB，进行压缩
                         if os.path.getsize(image_path) > 1_000_000:
-                            img = img.convert('RGB')
-                            img.save(temp_file.name, 'JPEG', quality=70, optimize=True)
+                            img = img.convert("RGB")
+                            img.save(temp_file.name, "JPEG", quality=70, optimize=True)
                         else:
-                            img = img.convert('RGB')
-                            img.save(temp_file.name, 'JPEG')
+                            img = img.convert("RGB")
+                            img.save(temp_file.name, "JPEG")
 
                     # 读取处理后的图片内容
-                    with open(temp_file.name, 'rb') as f:
+                    with open(temp_file.name, "rb") as f:
                         key = (
                             f"upload/{config.get_value('userInfo.orgJson.snowFlakeId')}"
                             f"/{time.strftime('%Y-%m-%d', time.localtime())}"
                             f"/report/{config.get_value('userInfo.userId')}_{int(time.time() * 1000000)}.jpg"
                         )
                         data = {
-                            'token': token,
-                            'key': key,
-                            'x-qn-meta-fname': f'{int(time.time() * 1000)}.jpg'
+                            "token": token,
+                            "key": key,
+                            "x-qn-meta-fname": f"{int(time.time() * 1000)}.jpg",
                         }
 
-                        files = {
-                            'file': (key, f, 'application/octet-stream')
-                        }
-                        response = requests.post(url, headers=headers, files=files, data=data)
+                        files = {"file": (key, f, "application/octet-stream")}
+                        response = requests.post(
+                            url, headers=headers, files=files, data=data
+                        )
                         response.raise_for_status()  # 如果响应状态不是200，将引发HTTPError异常
 
                         # 检查响应中是否包含key字段
                         response_data = response.json()
-                        if 'key' in response_data:
-                            successful_keys.append(response_data['key'].replace("upload/", ""))
+                        if "key" in response_data:
+                            successful_keys.append(
+                                response_data["key"].replace("upload/", "")
+                            )
                         else:
-                            logging.warning(f"上传成功但响应中没有key字段: {image_path}")
+                            logging.warning(
+                                f"上传成功但响应中没有key字段: {image_path}"
+                            )
 
                 # 如果成功上传，跳出重试循环
                 break
@@ -637,4 +658,4 @@ def upload(
                     os.unlink(temp_file.name)
 
     # 返回成功上传的图片key，用逗号分隔
-    return ','.join(successful_keys)
+    return ",".join(successful_keys)

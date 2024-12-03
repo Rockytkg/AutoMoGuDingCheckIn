@@ -12,12 +12,7 @@ import requests
 
 
 class MessagePusher:
-    STATUS_EMOJIS = {
-        "success": "✅",
-        "fail": "❌",
-        "skip": "⏭️",
-        "unknown": "❓"
-    }
+    STATUS_EMOJIS = {"success": "✅", "fail": "❌", "skip": "⏭️", "unknown": "❓"}
 
     def __init__(self, push_config: list):
         """
@@ -79,10 +74,7 @@ class MessagePusher:
         :type content: str
         """
         url = f'https://sctapi.ftqq.com/{config["sendKey"]}.send'
-        data = {
-            "title": title,
-            "desp": content
-        }
+        data = {"title": title, "desp": content}
 
         rsp = requests.post(url, data=data).json()
         if rsp.get("code") == 0:
@@ -101,10 +93,7 @@ class MessagePusher:
         :type content: str
         """
         url = f'https://www.pushplus.plus/send/{config["token"]}'
-        data = {
-            "title": title,
-            "content": content
-        }
+        data = {"title": title, "content": content}
 
         rsp = requests.post(url, data=data).json()
         if rsp.get("code") == 200:
@@ -127,7 +116,7 @@ class MessagePusher:
             "title": title,
             "content": content,
             "channel": config["channel"],
-            "to": config["to"]
+            "to": config["to"],
         }
 
         rsp = requests.post(url, data=data).json()
@@ -146,7 +135,7 @@ class MessagePusher:
         :param content: 内容
         :type content: str
         """
-        url = f'https://wxpusher.zjiecode.com/api/send/message/simple-push'
+        url = f"https://wxpusher.zjiecode.com/api/send/message/simple-push"
         data = {
             "content": content,
             "summary": title,
@@ -171,12 +160,14 @@ class MessagePusher:
         :type content: str
         """
         msg = MIMEMultipart()
-        msg['From'] = formataddr((Header(config['from'], 'utf-8').encode(), config['username']))
-        msg['To'] = Header(config['to'], 'utf-8')
-        msg['Subject'] = Header(title, 'utf-8')
+        msg["From"] = formataddr(
+            (Header(config["from"], "utf-8").encode(), config["username"])
+        )
+        msg["To"] = Header(config["to"], "utf-8")
+        msg["Subject"] = Header(title, "utf-8")
 
         # 添加邮件内容
-        msg.attach(MIMEText(content, 'html', 'utf-8'))
+        msg.attach(MIMEText(content, "html", "utf-8"))
 
         with smtplib.SMTP_SSL(config["host"], config["port"]) as server:
             server.login(config["username"], config["password"])
@@ -212,32 +203,48 @@ class MessagePusher:
         for result in results:
             task_type = result.get("task_type", "未知任务")
             status = result.get("status", "unknown")
-            status_emoji = MessagePusher.STATUS_EMOJIS.get(status, MessagePusher.STATUS_EMOJIS["unknown"])
+            status_emoji = MessagePusher.STATUS_EMOJIS.get(
+                status, MessagePusher.STATUS_EMOJIS["unknown"]
+            )
 
-            message_parts.extend([
-                f"### {status_emoji} {task_type}\n\n",
-                f"**状态**：{status}\n\n",
-                f"**结果**：{result.get('message', '无消息')}\n\n"
-            ])
+            message_parts.extend(
+                [
+                    f"### {status_emoji} {task_type}\n\n",
+                    f"**状态**：{status}\n\n",
+                    f"**结果**：{result.get('message', '无消息')}\n\n",
+                ]
+            )
 
             details = result.get("details")
             if status == "success" and isinstance(details, dict):
                 message_parts.append("**详细信息**：\n\n")
-                message_parts.extend(f"- **{key}**：{value}\n" for key, value in details.items())
+                message_parts.extend(
+                    f"- **{key}**：{value}\n" for key, value in details.items()
+                )
                 message_parts.append("\n")
 
             # 添加报告内容（如果有）
-            if status == "success" and task_type in ["日报提交", "周报提交", "月报提交"]:
+            if status == "success" and task_type in [
+                "日报提交",
+                "周报提交",
+                "月报提交",
+            ]:
                 report_content = result.get("report_content", "")
                 if report_content:
-                    preview = f"{report_content[:50]}..." if len(report_content) > 50 else report_content
-                    message_parts.extend([
-                        f"**报告预览**：\n\n{preview}\n\n",
-                        "<details>\n",
-                        "<summary>点击查看完整报告</summary>\n\n",
-                        f"```\n{report_content}\n```\n",
-                        "</details>\n\n"
-                    ])
+                    preview = (
+                        f"{report_content[:50]}..."
+                        if len(report_content) > 50
+                        else report_content
+                    )
+                    message_parts.extend(
+                        [
+                            f"**报告预览**：\n\n{preview}\n\n",
+                            "<details>\n",
+                            "<summary>点击查看完整报告</summary>\n\n",
+                            f"```\n{report_content}\n```\n",
+                            "</details>\n\n",
+                        ]
+                    )
 
             message_parts.append("---\n\n")
 
@@ -261,12 +268,14 @@ class MessagePusher:
         for result in results:
             task_type = result.get("task_type", "未知任务")
             status = result.get("status", "unknown")
-            status_emoji = MessagePusher.STATUS_EMOJIS.get(status, MessagePusher.STATUS_EMOJIS["unknown"])
+            status_emoji = MessagePusher.STATUS_EMOJIS.get(
+                status, MessagePusher.STATUS_EMOJIS["unknown"]
+            )
             status_class = {
                 "success": "text-success",
                 "fail": "text-danger",
                 "skip": "text-warning",
-                "unknown": "text-secondary"
+                "unknown": "text-secondary",
             }.get(status, "text-secondary")
 
             html += f"""<div class="card"><h3 class="card-title">{status_emoji} {task_type}</h3><p><strong>状态：</strong><span class="{status_class}">{status}</span></p><p><strong>结果：</strong>{result.get('message', '无消息')}</p>"""
@@ -275,17 +284,25 @@ class MessagePusher:
             if status == "success" and isinstance(details, dict):
                 html += '<div class="bg-light"><h4>详细信息</h4>'
                 for key, value in details.items():
-                    html += f'<p><strong>{key}：</strong>{value}</p>'
-                html += '</div>'
+                    html += f"<p><strong>{key}：</strong>{value}</p>"
+                html += "</div>"
 
-            if status == "success" and task_type in ["日报提交", "周报提交", "月报提交"]:
+            if status == "success" and task_type in [
+                "日报提交",
+                "周报提交",
+                "月报提交",
+            ]:
                 report_content = result.get("report_content", "")
                 if report_content:
-                    preview = f"{report_content[:50]}..." if len(report_content) > 50 else report_content
+                    preview = (
+                        f"{report_content[:50]}..."
+                        if len(report_content) > 50
+                        else report_content
+                    )
                     report_id = random.randint(1000, 9999)
                     html += f"""<div class="report-preview"><p><strong>报告预览：</strong>{preview}</p></div><input type="checkbox" id="report-{report_id}" class="show-report"><label for="report-{report_id}">查看完整报告</label><div class="full-report"><pre>{report_content}</pre></div>"""
 
-            html += '</div>'
+            html += "</div>"
 
         html += """</div></body></html>"""
 

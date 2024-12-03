@@ -11,11 +11,11 @@ import numpy as np
 from aes_pkcs5.algorithms.aes_ecb_pkcs5_padding import AESECBPKCS5Padding
 
 logging.basicConfig(
-    format='[%(asctime)s] %(name)s %(levelname)s: %(message)s',
+    format="[%(asctime)s] %(name)s %(levelname)s: %(message)s",
     level=logging.INFO,
-    datefmt='%Y-%m-%d %I:%M:%S'
+    datefmt="%Y-%m-%d %I:%M:%S",
 )
-logger = logging.getLogger('ToolModule')
+logger = logging.getLogger("ToolModule")
 
 
 def create_sign(*args) -> str:
@@ -30,11 +30,13 @@ def create_sign(*args) -> str:
     :return: 生成的MD5签名。
     :rtype: str
     """
-    sign_str = ''.join(args) + "3478cbbc33f84bd00d75d7dfa69e0daa"
+    sign_str = "".join(args) + "3478cbbc33f84bd00d75d7dfa69e0daa"
     return md5(sign_str.encode("utf-8")).hexdigest()
 
 
-def aes_encrypt(plaintext: str, key: str = "23DbtQHR2UMbH6mJ", out_format: str = "hex") -> str:
+def aes_encrypt(
+    plaintext: str, key: str = "23DbtQHR2UMbH6mJ", out_format: str = "hex"
+) -> str:
     """AES加密。
 
     该方法使用指定的密钥对给定的明文字符串进行AES加密，并返回加密后的密文。
@@ -60,7 +62,9 @@ def aes_encrypt(plaintext: str, key: str = "23DbtQHR2UMbH6mJ", out_format: str =
         raise ValueError(f"加密失败: {str(e)}")
 
 
-def aes_decrypt(ciphertext: str, key: str = "23DbtQHR2UMbH6mJ", out_format: str = "hex") -> str:
+def aes_decrypt(
+    ciphertext: str, key: str = "23DbtQHR2UMbH6mJ", out_format: str = "hex"
+) -> str:
     """AES解密。
 
     该方法使用指定的密钥对给定的密文字符串进行AES解密，并返回解密后的明文。
@@ -106,8 +110,8 @@ def get_current_month_info() -> dict:
 
     end_of_month = next_month_start - timedelta(days=1)
 
-    start_time_str = start_of_month.strftime('%Y-%m-%d %H:%M:%S')
-    end_time_str = end_of_month.strftime('%Y-%m-%d 00:00:00Z')
+    start_time_str = start_of_month.strftime("%Y-%m-%d %H:%M:%S")
+    end_time_str = end_of_month.strftime("%Y-%m-%d 00:00:00Z")
 
     return {"startTime": start_time_str, "endTime": end_time_str}
 
@@ -131,7 +135,9 @@ def desensitize_name(name):
     return f"{first_char}{'*' * middle_length}{last_char}"
 
 
-def calculate_precise_slider_distance(target_start_x: int, target_end_x: int, slider_width: int) -> float:
+def calculate_precise_slider_distance(
+    target_start_x: int, target_end_x: int, slider_width: int
+) -> float:
     """
     计算滑块需要移动的精确距离，并添加微小随机偏移。
 
@@ -167,10 +173,10 @@ def extract_png_width(png_binary):
 
     :raises ValueError: 如果输入数据不是有效的PNG图像，抛出包含详细错误信息的异常。
     """
-    if png_binary[:8] != b'\x89PNG\r\n\x1a\n':
+    if png_binary[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError("无效的PNG签名：不是有效的PNG图像")
     try:
-        width = struct.unpack('>I', png_binary[16:20])[0]
+        width = struct.unpack(">I", png_binary[16:20])[0]
     except struct.error:
         raise ValueError("无法从PNG数据中提取宽度信息")
 
@@ -194,7 +200,7 @@ def recognize_captcha(target: str, background: str) -> str:
     target_width = extract_png_width(target_bytes)
     slider_distance = calculate_precise_slider_distance(res[0], res[1], target_width)
     slider_data = {"x": slider_distance, "y": 5}
-    return json.dumps(slider_data, separators=(',', ':'))
+    return json.dumps(slider_data, separators=(",", ":"))
 
 
 def slide_match(target_bytes: bytes = None, background_bytes: bytes = None) -> list:
@@ -212,7 +218,9 @@ def slide_match(target_bytes: bytes = None, background_bytes: bytes = None) -> l
     """
     target = cv2.imdecode(np.frombuffer(target_bytes, np.uint8), cv2.IMREAD_ANYCOLOR)
 
-    background = cv2.imdecode(np.frombuffer(background_bytes, np.uint8), cv2.IMREAD_ANYCOLOR)
+    background = cv2.imdecode(
+        np.frombuffer(background_bytes, np.uint8), cv2.IMREAD_ANYCOLOR
+    )
 
     background = cv2.Canny(background, 100, 200)
     target = cv2.Canny(target, 100, 200)

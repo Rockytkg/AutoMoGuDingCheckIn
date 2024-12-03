@@ -8,7 +8,9 @@ from typing import Any, Dict, Optional
 class ConfigManager:
     """管理配置文件的加载、验证和更新。"""
 
-    def __init__(self, path: Optional[str] = None, config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, path: Optional[str] = None, config: Optional[Dict[str, Any]] = None
+    ):
         """
         初始化ConfigManager实例。
 
@@ -36,13 +38,17 @@ class ConfigManager:
         :raises json.JSONDecodeError: 如果配置文件格式错误。
         """
         try:
-            with self._path.open('r', encoding='utf-8') as jsonfile:
+            with self._path.open("r", encoding="utf-8") as jsonfile:
                 config = json.load(jsonfile)
 
             # 为经纬度添加随机偏移
-            location = config.get('config', {}).get('clockIn', {}).get('location', {})
-            for coord in ['latitude', 'longitude']:
-                if coord in location and isinstance(location[coord], str) and len(location[coord]) > 1:
+            location = config.get("config", {}).get("clockIn", {}).get("location", {})
+            for coord in ["latitude", "longitude"]:
+                if (
+                    coord in location
+                    and isinstance(location[coord], str)
+                    and len(location[coord]) > 1
+                ):
                     location[coord] = location[coord][:-1] + str(random.randint(0, 9))
 
             self._logger.info(f"配置文件已加载: {self._path}")
@@ -62,7 +68,7 @@ class ConfigManager:
         try:
             for key in keys:
                 # 拆分点（.）符号的键名
-                for sub_key in key.split('.'):
+                for sub_key in key.split("."):
                     value = value[sub_key]
             return value
         except KeyError:
@@ -102,7 +108,7 @@ class ConfigManager:
             return
 
         try:
-            with self._path.open('w', encoding='utf-8') as jsonfile:
+            with self._path.open("w", encoding="utf-8") as jsonfile:
                 json.dump(self._config, jsonfile, ensure_ascii=False, indent=2)
             self._logger.info(f"配置文件已更新: {self._path}")
         except Exception as e:
