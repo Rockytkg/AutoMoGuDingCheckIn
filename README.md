@@ -19,14 +19,15 @@ AutoMoGuDingCheckIn 旨在：
 - [x] 自动提交日报
 - [x] 自动提交周报
 - [x] 自动提交月报
-- [x] AI生成周、日、月报
+- [x] AI 生成周、日、月报
 - [x] 打卡备注以及带图打卡
-- [x] Github工作流支持
+- [x] Github 工作流支持
 - [ ] ~~适配云函数~~
 
 ## 使用方法
 
-### Github工作流（免服务器部署）
+### Github 工作流（免服务器部署）
+
 参见 [Wiki](https://github.com/Rockytkg/AutoMoGuDingCheckIn/wiki/Github-%E5%B7%A5%E4%BD%9C%E6%B5%81%E9%83%A8%E7%BD%B2)
 
 **切记不要将配置文件上传到公开仓库，否则会造成信息泄露。请使用环境变量！！！，已经泄露请立刻修改工学云密码！！！**
@@ -41,22 +42,27 @@ AutoMoGuDingCheckIn 旨在：
 #### 安装
 
 1. 克隆代码库：
-    ```bash
-    git clone https://github.com/Rockytkg/AutoMoGuDingCheckIn.git
-    cd AutoMoGuDingCheckIn
-    ```
+
+   ```bash
+   git clone https://github.com/Rockytkg/AutoMoGuDingCheckIn.git
+   cd AutoMoGuDingCheckIn
+   ```
 
 2. 按照下面要求添加配置文件
-3. 执行（linux系统，windows需要自行配置计划任务程序）
-    ```bash
-    chmod +x setup.sh
-    bash setup.sh
-    ```
-    按照脚本提示设置定时任务并执行
+3. 执行（linux 系统，windows 需要自行配置计划任务程序）
+
+   ```bash
+   chmod +x setup.sh
+   bash setup.sh
+   ```
+
+   按照脚本提示设置定时任务并执行
+
 #### 配置
 
-1. 打开user目录，根据下表修改json文件中的配置（每个文件就是一个用户）
+1. 打开 user 目录，根据下表修改 json 文件中的配置（每个文件就是一个用户）
 
+<!-- markdownlint-disable MD033 -->
 <table>
     <tr>
         <th>配置项</th>
@@ -251,11 +257,7 @@ AutoMoGuDingCheckIn 旨在：
         "area": "高新区"
       },
       "imageCount": 0,
-      "description": [
-        "今天天气不错",
-        "今天天气很好",
-        "今天天气不太好"
-      ]
+      "description": ["今天天气不错", "今天天气很好", "今天天气不太好"]
     },
     "reportSettings": {
       "daily": {
@@ -319,13 +321,13 @@ AutoMoGuDingCheckIn 旨在：
 
 ##### 图片提交说明
 
-配置对应的配置项目，将图片放到images目录，运行时会自动随机抽取指定数量图片提交
+配置对应的配置项目，将图片放到 images 目录，运行时会自动随机抽取指定数量图片提交
 
 ##### 消息推送
 
 支持：
 
-- [Server酱](https://sct.ftqq.com/r/13600)
+- [Server 酱](https://sct.ftqq.com/r/13600)
 - [PushPlus](https://www.pushplus.plus/)
 - [AnPush](https://anpush.com/)
 - [WxPusher](https://wxpusher.zjiecode.com/)
@@ -347,4 +349,5 @@ python main.py
 如有任何疑问或需要支持，请通过提交 [issue](https://github.com/Rockytkg/AutoMoGuDingCheckIn/issues) 与我们联系。
 
 ## start
+
 [![Stargazers over time](https://starchart.cc/Rockytkg/AutoMoGuDingCheckIn.svg?variant=adaptive)](https://starchart.cc/Rockytkg/AutoMoGuDingCheckIn)
