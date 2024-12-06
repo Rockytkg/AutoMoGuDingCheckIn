@@ -296,8 +296,7 @@ class MessagePusher:
                         if len(report_content) > 50
                         else report_content
                     )
-                    report_id = random.randint(1000, 9999)
-                    html += f"""<div class="report-preview"><p><strong>报告预览：</strong>{preview}</p></div><input type="checkbox" id="report-{report_id}" class="show-report"><label for="report-{report_id}">查看完整报告</label><div class="full-report"><pre>{report_content}</pre></div>"""
+                    html += f"""<div class="report-preview"><details><summary><strong>报告预览：</strong>{preview}</summary><div class="full-report"><pre>{report_content}</pre></div></details></div>"""
 
             html += "</div>"
 
