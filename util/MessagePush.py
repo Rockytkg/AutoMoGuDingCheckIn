@@ -10,6 +10,8 @@ from email.utils import formataddr
 
 import requests
 
+logger = logging.getLogger(__name__)
+
 
 class MessagePusher:
     STATUS_EMOJIS = {"success": "✅", "fail": "❌", "skip": "⏭️", "unknown": "❓"}
@@ -18,20 +20,20 @@ class MessagePusher:
         """
         初始化 MessagePusher 实例。
 
-        :param push_config: 配置列表
-        :type push_config: list
+        Args:
+            push_config (list): 配置列表。
         """
-        self._logger = logging.getLogger(__name__)
         self.push_config = push_config
 
-    def push(self, results: List[Dict[str, Any]]):
-        """推送消息
+    def push(self, results: List[Dict[str, Any]]) -> bool:
+        """
+        推送消息。
 
-        :param results: 任务执行结果列表
-        :type results: List[Dict[str, Any]]
+        Args:
+            results (List[Dict[str, Any]]): 任务执行结果列表。
 
-        :return: 是否推送成功
-        :rtype: bool
+        Returns:
+            bool: 是否推送成功。
         """
         success_count = sum(r.get("status") == "success" for r in results)
         status_emoji = "🎉" if success_count == len(results) else "📊"
@@ -57,59 +59,54 @@ class MessagePusher:
                         content = self._generate_html_message(results)
                         self._smtp_push(service_config, title, content)
                     else:
-                        self._logger.warning(f"不支持的推送服务类型: {service_type}")
+                        logger.warning(f"不支持的推送服务类型: {service_type}")
 
                 except Exception as e:
-                    self._logger.error(f"{service_type} 消息推送失败: {str(e)}")
+                    logger.error(f"{service_type} 消息推送失败: {str(e)}")
                     continue
 
     def _server_push(self, config: dict[str, Any], title: str, content: str):
         """Server酱 推送
 
-        :param config: 配置
-        :type config: dict[str, Any]
-        :param title: 标题
-        :type title: str
-        :param content: 内容
-        :type content: str
+        Args:
+            config (dict[str, Any]): 配置
+            title (str): 标题
+            content (str): 内容
         """
         url = f'https://sctapi.ftqq.com/{config["sendKey"]}.send'
         data = {"title": title, "desp": content}
 
         rsp = requests.post(url, data=data).json()
         if rsp.get("code") == 0:
-            self._logger.info("Server酱推送成功")
+            logger.info("Server酱推送成功")
         else:
             raise Exception(rsp.get("message"))
 
     def _pushplus_push(self, config: dict[str, Any], title: str, content: str):
         """PushPlus 推送
 
-        :param config: 配置
-        :type config: dict[str, Any]
-        :param title: 标题
-        :type title: str
-        :param content: 内容
-        :type content: str
+        Args:
+            config (dict[str, Any]): 配置
+            title (str): 标题
+            content (str): 内容
         """
         url = f'https://www.pushplus.plus/send/{config["token"]}'
         data = {"title": title, "content": content}
 
         rsp = requests.post(url, data=data).json()
         if rsp.get("code") == 200:
-            self._logger.info("PushPlus推送成功")
+            logger.info("PushPlus推送成功")
         else:
             raise Exception(rsp.get("msg"))
 
     def _anpush_push(self, config: dict[str, Any], title: str, content: str):
-        """AnPush 推送
+        """
+        AnPush 推送
 
-        :param config: 配置
-        :type config: dict[str, Any]
-        :param title: 标题
-        :type title: str
-        :param content: 内容
-        :type content: str
+        Args:
+            config (dict[str, Any]): 配置
+            title (str): 标题
+            content (str): 内容
         """
         url = f'https://api.anpush.com/push/{config["token"]}'
         data = {
@@ -121,19 +118,18 @@ class MessagePusher:
 
         rsp = requests.post(url, data=data).json()
         if rsp.get("code") == 200:
-            self._logger.info("AnPush推送成功")
+            logger.info("AnPush推送成功")
         else:
             raise Exception(rsp.get("msg"))
 
     def _wxpusher_push(self, config: dict[str, Any], title: str, content: str):
-        """WxPusher 推送
+        """
+        使用 WxPusher 进行推送。
 
-        :param config: 配置
-        :type config: dict[str, Any]
-        :param title: 标题
-        :type title: str
-        :param content: 内容
-        :type content: str
+        Args:
+            config (dict[str, Any]): 配置信息。
+            title (str): 推送的标题。
+            content (str): 推送的内容。
         """
         url = f"https://wxpusher.zjiecode.com/api/send/message/simple-push"
         data = {
@@ -145,19 +141,18 @@ class MessagePusher:
 
         rsp = requests.post(url, json=data).json()
         if rsp.get("code") == 1000:
-            self._logger.info("WxPusher推送成功")
+            logger.info("WxPusher推送成功")
         else:
             raise Exception(rsp.get("msg"))
 
     def _smtp_push(self, config: dict[str, Any], title: str, content: str):
-        """SMTP 邮件推送
+        """
+        SMTP 邮件推送。
 
-        :param config: 配置
-        :type config: dict[str, Any]
-        :param title: 标题
-        :type title: str
-        :param content: 内容
-        :type content: str
+        Args:
+            config (dict[str, Any]): 配置。
+            title (str): 标题。
+            content (str): 内容。
         """
         msg = MIMEMultipart()
         msg["From"] = formataddr(
@@ -172,7 +167,7 @@ class MessagePusher:
         with smtplib.SMTP_SSL(config["host"], config["port"]) as server:
             server.login(config["username"], config["password"])
             server.send_message(msg)
-            self._logger.info(f"邮件已发送成功")
+            logger.info(f"邮件已发送成功")
             server.quit()
 
     @staticmethod
@@ -180,10 +175,11 @@ class MessagePusher:
         """
         生成 Markdown 格式的报告。
 
-        :param results: 任务执行结果列表
-        :type results: List[Dict[str, Any]]
-        :return: Markdown 格式的消息
-        :rtype: str
+        Args:
+            results (List[Dict[str, Any]]): 任务执行结果列表。
+
+        Returns:
+            str: Markdown 格式的消息。
         """
         message_parts = ["# 工学云任务执行报告\n\n"]
 
@@ -255,10 +251,11 @@ class MessagePusher:
         """
         生成美观的HTML格式报告。
 
-        :param results: 任务执行结果列表
-        :type results: List[Dict[str, Any]]
-        :return: HTML格式的消息
-        :rtype: str
+        Args:
+            results (List[Dict[str, Any]]): 任务执行结果列表。
+
+        Returns:
+            str: HTML格式的消息。
         """
         status_counts = Counter(result.get("status", "unknown") for result in results)
         total_tasks = len(results)

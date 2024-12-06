@@ -7,95 +7,44 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import concurrent.futures
 
-from util.Api import ApiClient, generate_article, upload
+from coreApi.MainLogicApi import ApiClient
+from coreApi.AiServiceClient import generate_article
 from util.Config import ConfigManager
 from util.MessagePush import MessagePusher
-from util.Tool import desensitize_name
+from util.HelperFunctions import desensitize_name
+from util.FileUploader import upload_img
 
-# 配置日志
 logging.basicConfig(
     format="[%(asctime)s] %(name)s %(levelname)s: %(message)s",
     level=logging.INFO,
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger("MainModule")
+logger = logging.getLogger(__name__)
 
 USER_DIR = os.path.join(os.path.dirname(__file__), "user")
 
 
-def get_api_client(config: ConfigManager) -> ApiClient:
-    """获取配置好的ApiClient实例。
-
-    :param config: 配置管理器。
-    :type config: ConfigManager
-    :return: ApiClient实例。
-    :rtype: ApiClient
-    """
-    api_client = ApiClient(config)
-    if not config.get_value("userInfo.token"):
-        api_client.login()
-    if not config.get_value("planInfo.planId"):
-        api_client.fetch_internship_plan()
-    else:
-        logger.info("使用本地数据")
-    return api_client
-
-
-def upload_img(api_client: ApiClient, config: ConfigManager, count: int) -> str:
-    """上传指定数量的图片
-
-    :param api_client: ApiClient实例。
-    :type api_client: ApiClient
-    :param config: 配置管理器。
-    :type config: ConfigManager
-    :param count: 需要上传的图片数量。
-    :type count: int
-    :return: 上传成功的图片链接
-    :rtype: str
-    """
-    # 检查数量是否大于0
-    if count <= 0:
-        return ""
-
-    images_dir = os.path.join(os.path.dirname(__file__), "images")
-    # 获取所有符合条件的图片文件
-    all_images = [
-        os.path.join(images_dir, f)
-        for f in os.listdir(images_dir)
-        if f.lower().endswith((".png", ".jpg", ".jpeg"))
-    ]
-
-    # 检查可用图片数量
-    if len(all_images) < count:
-        return ""
-
-    # 随机选择指定数量的图片
-    images = random.sample(all_images, count)
-
-    # 获取上传令牌并上传图片
-    token = api_client.get_upload_token()
-    return upload(token, images, config)
-
-
 def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, Any]:
-    """执行打卡操作
+    """
+    执行打卡操作。
 
-    :param api_client: ApiClient实例。
-    :type api_client: ApiClient
-    :param config: 配置管理器。
-    :type config: ConfigManager
-    :return: 执行结果
-    :rtype: Dict[str, Any]
+    Args:
+        api_client (ApiClient): ApiClient 实例。
+        config (ConfigManager): 配置管理器。
+
+    Returns:
+        Dict[str, Any]: 执行结果。
     """
     try:
         current_time = datetime.now()
         current_hour = current_time.hour
 
+        # TODD: 更加详细的打卡方式设置
         # 判断打卡类型
-        if 8 <= current_hour < 12:
+        if current_hour < 12:
             checkin_type = "START"
             display_type = "上班"
-        elif 17 <= current_hour < 20:
+        elif current_hour >= 12:
             checkin_type = "END"
             display_type = "下班"
         else:
@@ -126,7 +75,10 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
 
         # 打卡图片和备注
         attachments = upload_img(
-            api_client, config, config.get_value("config.clockIn.imageCount")
+            api_client.get_upload_token(),
+            config.get_value("userInfo.orgJson.snowFlakeId"),
+            config.get_value("userInfo.userId"),
+            config.get_value("config.clockIn.imageCount"),
         )
         description = (
             random.choice(config.get_value("config.clockIn.description"))
@@ -162,14 +114,15 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
 
 
 def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[str, Any]:
-    """提交日报
+    """
+    提交日报。
 
-    :param api_client: ApiClient实例。
-    :type api_client: ApiClient
-    :param config: 配置管理器。
-    :type config: ConfigManager
-    :return: 执行结果
-    :rtype: Dict[str, Any]
+    Args:
+        api_client (ApiClient): ApiClient 实例。
+        config (ConfigManager): 配置管理器。
+
+    Returns:
+        Dict[str, Any]: 执行结果。
     """
     if not config.get_value("config.reportSettings.daily.enabled"):
         logger.info("用户未开启日报提交功能，跳过日报提交任务")
@@ -180,7 +133,7 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
         }
 
     current_time = datetime.now()
-    if not (17 <= current_time.hour < 20):
+    if not (current_time.hour >= 12):
         logger.info("未到日报提交时间（需12点后）")
         return {
             "status": "skip",
@@ -213,9 +166,10 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
 
         # 上传图片并获取附件
         attachments = upload_img(
-            api_client,
-            config,
-            config.get_value("config.reportSettings.daily.imageCount"),
+            api_client.get_upload_token(),
+            config.get_value("userInfo.orgJson.snowFlakeId"),
+            config.get_value("userInfo.userId"),
+            config.get_value("config.clockIn.imageCount"),
         )
 
         report_info = {
@@ -256,12 +210,12 @@ def submit_weekly_report(
 ) -> Dict[str, Any]:
     """提交周报
 
-    :param config: 配置管理器。
-    :type config: ConfigManager
-    :param api_client: ApiClient实例。
-    :type api_client: ApiClient
-    :return: 执行结果
-    :rtype: Dict[str, Any]
+    Args:
+        config (ConfigManager): 配置管理器。
+        api_client (ApiClient): ApiClient 实例。
+
+    Returns:
+        Dict[str, Any]: 执行结果。
     """
     if not config.get_value("config.reportSettings.weekly.enabled"):
         logger.info("用户未开启周报提交功能，跳过周报提交任务")
@@ -274,7 +228,7 @@ def submit_weekly_report(
     current_time = datetime.now()
     submit_day = config.get_value("config.reportSettings.weekly.submitTime")
 
-    if current_time.weekday() + 1 != submit_day or not (17 <= current_time.hour < 20):
+    if current_time.weekday() + 1 != submit_day or not (current_time.hour >= 12):
         logger.info("未到周报提交时间")
         return {
             "status": "skip",
@@ -310,9 +264,10 @@ def submit_weekly_report(
 
         # 上传图片并获取附件
         attachments = upload_img(
-            api_client,
-            config,
-            config.get_value("config.reportSettings.weekly.imageCount"),
+            api_client.get_upload_token(),
+            config.get_value("userInfo.orgJson.snowFlakeId"),
+            config.get_value("userInfo.userId"),
+            config.get_value("config.clockIn.imageCount"),
         )
 
         report_info = {
@@ -328,7 +283,7 @@ def submit_weekly_report(
         api_client.submit_report(report_info)
 
         logger.info(
-            f"第{week}周周报已提交，开始时间：{current_week_info.get('startTime')}, 结束时间：{current_week_info.get('endTime')}"
+            f"第{week}周周报已提交，开始时间：{current_week_info.get('startTime')},结束时间：{current_week_info.get('endTime')}"
         )
 
         return {
@@ -357,12 +312,12 @@ def submit_monthly_report(
 ) -> Dict[str, Any]:
     """提交月报
 
-    :param config: 配置管理器。
-    :type config: ConfigManager
-    :param api_client: ApiClient实例。
-    :type api_client: ApiClient
-    :return: 执行结果
-    :rtype: Dict[str, Any]
+    Args:
+        config (ConfigManager): 配置管理器。
+        api_client (ApiClient): ApiClient 实例。
+
+    Returns:
+        Dict[str, Any]: 执行结果。
     """
     if not config.get_value("config.reportSettings.monthly.enabled"):
         logger.info("用户未开启月报提交功能，跳过月报提交任务")
@@ -379,7 +334,7 @@ def submit_monthly_report(
     submit_day = config.get_value("config.reportSettings.monthly.submitTime")
 
     if current_time.day != min(submit_day, last_day_of_month.day) or not (
-        17 <= current_time.hour < 20
+        current_time.hour >= 12
     ):
         logger.info("未到月报提交时间")
         return {
@@ -413,9 +368,10 @@ def submit_monthly_report(
 
         # 上传图片并获取附件
         attachments = upload_img(
-            api_client,
-            config,
-            config.get_value("config.reportSettings.monthly.imageCount"),
+            api_client.get_upload_token(),
+            config.get_value("userInfo.orgJson.snowFlakeId"),
+            config.get_value("userInfo.userId"),
+            config.get_value("config.clockIn.imageCount"),
         )
 
         report_info = {
@@ -451,10 +407,11 @@ def submit_monthly_report(
 
 
 def run(config: ConfigManager) -> None:
-    """执行所有任务
+    """
+    执行所有任务。
 
-    :param config: 配置管理器
-    :type config: ConfigManager
+    Args:
+        config (ConfigManager): 配置管理器。
     """
     results: List[Dict[str, Any]] = []
 
@@ -465,7 +422,13 @@ def run(config: ConfigManager) -> None:
         return
 
     try:
-        api_client = get_api_client(config)
+        api_client = ApiClient(config)
+        if not config.get_value("userInfo.token"):
+            api_client.login()
+        if not config.get_value("planInfo.planId"):
+            api_client.fetch_internship_plan()
+        else:
+            logger.info("使用本地数据")
     except Exception as e:
         error_message = f"获取API客户端失败: {str(e)}"
         logger.error(error_message)
@@ -498,10 +461,10 @@ def run(config: ConfigManager) -> None:
 
 def execute_tasks(selected_files: Optional[List[str]] = None):
     """
-    创建并执行任务
+    创建并执行任务。
 
-    :param selected_files: 可选的指定配置文件列表(不含扩展名)
-    :type selected_files: list
+    Args:
+        selected_files (Optional[List[str]]): 指定配置文件列表（不含扩展名），默认为 None。
     """
     logger.info("开始执行工学云任务")
 

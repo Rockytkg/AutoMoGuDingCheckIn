@@ -11,12 +11,12 @@ check_root_user() {
 # 依赖检查并安装（仅首次运行）
 initialize_environment() {
     echo "开始环境初始化..."
-    
+
     # 检查并安装指定依赖
     check_and_install() {
         PACKAGE_NAME=$1
         PACKAGE_CMD=$2
-        if ! command -v $PACKAGE_CMD &> /dev/null; then
+        if ! command -v $PACKAGE_CMD &>/dev/null; then
             echo "$PACKAGE_NAME 未安装，正在尝试安装..."
             if [[ "$OSTYPE" == "linux-gnu"* ]]; then
                 sudo apt-get update
@@ -60,7 +60,7 @@ initialize_environment() {
     fi
 
     # 设置定时任务（仅首次）
-    SCRIPT_PATH="$(realpath "$0")"  # 动态获取当前脚本的绝对路径
+    SCRIPT_PATH="$(realpath "$0")" # 动态获取当前脚本的绝对路径
     if ! crontab -l | grep -q "$SCRIPT_PATH"; then
         echo "首次运行，设置定时任务..."
         read -p "请输入定时任务的小时（0-23，以逗号分隔，例如 8,12,16,20这样写将在8点12点16点20点执行打卡）： " HOURS
@@ -68,7 +68,10 @@ initialize_environment() {
         MINUTES=${MINUTES:-0}
 
         CRON_JOB="$MINUTES $HOURS * * * $SCRIPT_PATH"
-        (crontab -l; echo "$CRON_JOB") | crontab -
+        (
+            crontab -l
+            echo "$CRON_JOB"
+        ) | crontab -
         echo "定时任务已设置为：$CRON_JOB"
     else
         echo "定时任务已存在，无需重复设置。"
@@ -92,7 +95,7 @@ run_main_script() {
 # 检查是否是首次运行
 if [ ! -f ".initialized" ]; then
     echo "首次运行脚本，执行初始化..."
-    check_root_user  # 首次运行时检查是否为 root 用户
+    check_root_user # 首次运行时检查是否为 root 用户
     initialize_environment
     touch .initialized
 
