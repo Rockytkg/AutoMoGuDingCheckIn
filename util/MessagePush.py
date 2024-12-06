@@ -227,18 +227,10 @@ class MessagePusher:
             ]:
                 report_content = result.get("report_content", "")
                 if report_content:
-                    preview = (
-                        f"{report_content[:50]}..."
-                        if len(report_content) > 50
-                        else report_content
-                    )
                     message_parts.extend(
                         [
-                            f"**报告预览**：\n\n{preview}\n\n",
-                            "<details>\n",
-                            "<summary>点击查看完整报告</summary>\n\n",
-                            f"```\n{report_content}\n```\n",
-                            "</details>\n\n",
+                            f"**报告**：",
+                            f"```\n{report_content}\n```\n"
                         ]
                     )
 
