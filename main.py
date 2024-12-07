@@ -169,7 +169,7 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
             api_client.get_upload_token(),
             config.get_value("userInfo.orgJson.snowFlakeId"),
             config.get_value("userInfo.userId"),
-            config.get_value("config.clockIn.imageCount"),
+            config.get_value("config.reportSettings.daily.imageCount"),
         )
 
         report_info = {
@@ -267,7 +267,7 @@ def submit_weekly_report(
             api_client.get_upload_token(),
             config.get_value("userInfo.orgJson.snowFlakeId"),
             config.get_value("userInfo.userId"),
-            config.get_value("config.clockIn.imageCount"),
+            config.get_value("config.reportSettings.weekly.imageCount"),
         )
 
         report_info = {
@@ -371,7 +371,7 @@ def submit_monthly_report(
             api_client.get_upload_token(),
             config.get_value("userInfo.orgJson.snowFlakeId"),
             config.get_value("userInfo.userId"),
-            config.get_value("config.clockIn.imageCount"),
+            config.get_value("config.reportSettings.monthly.imageCount"),
         )
 
         report_info = {
