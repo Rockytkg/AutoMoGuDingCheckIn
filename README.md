@@ -166,7 +166,7 @@ AutoMoGuDingCheckIn 旨在：
     <tr>
         <td rowspan="3">AI 设置</td>
         <td>model</td>
-        <td>AI 模型名称（可根据需求修改）。</td>
+        <td>AI 模型名称（可根据需求修改，需要支持OpenAI格式的api，目前国产模型都提供有类似API）</td>
         <td>gpt-4o-mini</td>
     </tr>
     <tr>
