@@ -46,18 +46,13 @@ def desensitize_name(name: str) -> str:
     Returns:
         str: 脱敏后的姓名。
     """
-    # 对于空字符串或长度小于2的字符串，直接返回
-    if not name or len(name) < 2:
-        return name
-
-    # 计算脱敏后的字符
-    first_char = name[0]  # 姓名的第一个字符
-    last_char = name[-1]  # 姓名的最后一个字符
-    middle_length = len(name) - 2  # 中间部分的长度
-
-    # 返回脱敏结果
-    desensitized_name = f"{first_char}{'*' * middle_length}{last_char}"
-    return desensitized_name
+    name = name.strip()  # 去除前后空格，防止输入有空格影响判断
+    
+    n = len(name)
+    if n < 3:
+        return f"{name[0]}*"
+    else:
+        return f"{name[0]}{'*' * (n - 2)}{name[-1]}"
 
 
 def is_holiday(current_datetime: datetime = datetime.now()) -> bool:
