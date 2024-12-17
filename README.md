@@ -263,16 +263,27 @@ AutoMoGuDingCheckIn 旨在：
       "password": "工学云密码"
     },
     "clockIn": {
+      "mode": "daily",
       "location": {
         "address": "四川省 · 成都市 · 高新区 · 在科创十一街附近",
-        "latitude": "34.059922",
-        "longitude": "118.277435",
+        "latitude": "30.559922",
+        "longitude": "104.093023",
         "province": "四川省",
         "city": "成都市",
         "area": "高新区"
       },
       "imageCount": 0,
-      "description": ["今天天气不错", "今天天气很好", "今天天气不太好"]
+      "description": [
+        "今天天气不错",
+        "今天天气很好",
+        "今天天气不太好"
+      ],
+      "specialClockIn": false,
+      "customDays": [
+        1,
+        3,
+        5
+      ]
     },
     "reportSettings": {
       "daily": {
@@ -332,6 +343,7 @@ AutoMoGuDingCheckIn 旨在：
     "device": "{brand: TA J20, systemVersion: 17, Platform: Android, isPhysicalDevice: true, incremental: K23V10A}"
   }
 }
+
 ```
 
 ##### 图片提交说明
