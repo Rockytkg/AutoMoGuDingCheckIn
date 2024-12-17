@@ -11,7 +11,7 @@ from coreApi.MainLogicApi import ApiClient
 from coreApi.AiServiceClient import generate_article
 from util.Config import ConfigManager
 from util.MessagePush import MessagePusher
-from util.HelperFunctions import desensitize_name
+from util.HelperFunctions import desensitize_name, is_holiday
 from util.FileUploader import upload_img
 
 logging.basicConfig(
@@ -39,21 +39,37 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
         current_time = datetime.now()
         current_hour = current_time.hour
 
-        # TODD: 更加详细的打卡方式设置
-        # 判断打卡类型
+        # 确定打卡类型
         if current_hour < 12:
             checkin_type = "START"
             display_type = "上班"
-        elif current_hour >= 12:
+        else:
             checkin_type = "END"
             display_type = "下班"
-        else:
-            logger.info("当前不在打卡时间范围内")
-            return {
-                "status": "skip",
-                "message": "当前不在打卡时间范围内",
-                "task_type": "打卡",
-            }
+
+        # 判断是否为节假日模式并跳过打卡
+        if config.get_value(config.clockIn.mode) == "holiday" and is_holiday():
+            if config.get_value(config.clockIn.specialClockIn):
+                return {
+                    "status": "skip",
+                    "message": "今天是休息日，已跳过打卡",
+                    "task_type": "打卡",
+                }
+            checkin_type = "HOLIDAY"
+            display_type = "休息/节假日"
+
+        # 判断自定义打卡日期模式并跳过打卡
+        elif config.get_value(config.clockIn.mode) == "custom":
+            today = datetime.datetime.today().weekday() + 1  # 获取星期几（1-7）
+            if today not in config.get_value(config.clockIn.customDays):
+                if config.get_value(config.clockIn.specialClockIn):
+                    return {
+                        "status": "skip",
+                        "message": "今天不在设置打卡时间范围内，已跳过打卡",
+                        "task_type": "打卡",
+                    }
+                checkin_type = "HOLIDAY"
+                display_type = "休息/节假日"
 
         last_checkin_info = api_client.get_checkin_info()
 

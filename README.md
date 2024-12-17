@@ -82,7 +82,12 @@ AutoMoGuDingCheckIn 旨在：
         <td>your_password</td>
     </tr>
     <tr>
-        <td rowspan="8">打卡设置</td>
+        <td rowspan="8">打卡模式</td>
+        <td>mode</td>
+        <td>打卡地点的模式，`daily`：每天打上/下班卡，`holiday`：自动识别节假日并根据`specialClockIn`决定打卡类型，`custom`：自定义打卡（需配置`customDays`表示周几打卡）</td>
+        <td>daily</td>
+    </tr>
+    <tr>
         <td>address</td>
         <td>打卡地点的详细地址，确保信息准确。</td>
         <td>四川省 · 成都市 · 高新区 · 在科创十一街附近</td>
@@ -123,45 +128,55 @@ AutoMoGuDingCheckIn 旨在：
         <td>列表，一个元素为一条，打卡时候随机抽取，若为空就不带备注</td>
     </tr>
     <tr>
+        <td>specialClockIn</td>
+        <td>打卡类型，当打卡模式为`holiday`或者`custom`有效，值设置为`true`时候将会在节假日或者不在`customDays`配置中的时候打`休息/节假日`卡</td>
+        <td>false</td>
+    </tr>
+    <tr>
+        <td>customDays</td>
+        <td>自定义周几打卡（例子就是周一到周四打卡）</td>
+        <td>1,2,3,4</td>
+    </tr>
+    <tr>
         <td rowspan="8">报告设置</td>
         <td>daily.enabled</td>
-        <td>是否启用每日报告（true 或 false）。</td>
+        <td>是否启用日报提交（true 或 false）。</td>
         <td>false</td>
     </tr>
     <tr>
         <td>daily.imageCount</td>
-        <td>每日报告中需要上传的图片数量。</td>
+        <td>日报中需要上传的图片数量。</td>
         <td>0</td>
     </tr>
     <tr>
         <td>weekly.enabled</td>
-        <td>是否启用每周报告（true 或 false）。</td>
+        <td>是否启用周报提交（true 或 false）。</td>
         <td>true</td>
     </tr>
     <tr>
         <td>weekly.imageCount</td>
-        <td>每周报告中需要上传的图片数量。</td>
+        <td>周报中需要上传的图片数量。</td>
         <td>0</td>
     </tr>
     <tr>
         <td>weekly.submitTime</td>
-        <td>提交时间（以小时为单位，范围为0-23）。</td>
-        <td>4</td>
+        <td>提交时间</td>
+        <td>4（表示周四提交周报）</td>
     </tr>
     <tr>
         <td>monthly.enabled</td>
-        <td>是否启用每月报告（true 或 false）。</td>
+        <td>是否启用月报提交（true 或 false）。</td>
         <td>false</td>
     </tr>
     <tr>
         <td>monthly.imageCount</td>
-        <td>每月报告中需要上传的图片数量。</td>
+        <td>月报中需要上传的图片数量。</td>
         <td>0</td>
     </tr>
     <tr>
         <td>monthly.submitTime</td>
-        <td>提交时间（默认为29号）。</td>
-        <td>29</td>
+        <td>提交时间</td>
+        <td>29（每月29号提交月报如果没有29天则会在该月最后一天提交）</td>
     </tr>
     <tr>
         <td rowspan="3">AI 设置</td>

@@ -42,18 +42,30 @@ class ConfigManager:
             json.JSONDecodeError: 如果配置文件格式错误。
         """
         try:
+            # 打开并加载配置文件
             with self._path.open("r", encoding="utf-8") as jsonfile:
                 config = json.load(jsonfile)
 
+            # 确保 config 和 clockIn 字典存在
+            config.setdefault("config", {})
+            clock_in = config["config"].setdefault("clockIn", {})
+
+            # 检查并添加 mode 字段
+            if "mode" not in clock_in:
+                clock_in["mode"] = "daily"
+                logger.warning(
+                    "配置文件中缺少 'mode' 字段，已自动添加默认值 'daily'。"
+                    "请尽快更新配置文件以确保正确性。"
+                )
+
+            # 确保 location 字典存在
+            location = clock_in.setdefault("location", {})
+
             # 为经纬度添加随机偏移
-            location = config.get("config", {}).get("clockIn", {}).get("location", {})
             for coord in ["latitude", "longitude"]:
-                if (
-                    coord in location
-                    and isinstance(location[coord], str)
-                    and len(location[coord]) > 1
-                ):
-                    location[coord] = location[coord][:-1] + str(random.randint(0, 9))
+                value = location.get(coord)
+                if isinstance(value, str) and len(value) > 1:
+                    location[coord] = value[:-1] + str(random.randint(0, 9))
 
             logger.info(f"配置文件已加载: {self._path}")
             return config
