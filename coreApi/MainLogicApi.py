@@ -170,7 +170,7 @@ class ApiClient:
             "loginType": "android",
             "uuid": str(uuid.uuid4()).replace("-", ""),
             "device": "android",
-            "version": "5.15.0",
+            "version": "5.16.0",
             "t": aes_encrypt(str(int(time.time() * 1000))),
         }
         rsp = self._post_request(url, HEADERS, data, "登陆失败")
