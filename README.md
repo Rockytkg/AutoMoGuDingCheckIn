@@ -82,7 +82,7 @@ AutoMoGuDingCheckIn 旨在：
         <td>your_password</td>
     </tr>
     <tr>
-        <td rowspan="8">打卡模式</td>
+        <td rowspan="11">打卡模式</td>
         <td>mode</td>
         <td>打卡地点的模式，`daily`：每天打上/下班卡，`holiday`：自动识别节假日并根据`specialClockIn`决定打卡类型，`custom`：自定义打卡（需配置`customDays`表示周几打卡）</td>
         <td>daily</td>
