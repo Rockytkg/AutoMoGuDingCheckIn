@@ -382,7 +382,7 @@ class ApiClient:
         Raises:
             ValueError: 如果打卡提交失败，抛出包含详细错误信息的异常。
         """
-        url = "attendence/clock/v4/save"
+        url = "attendence/clock/v5/save"
         logger.info(f'打卡类型：{checkin_info.get("type")}')
 
         data = {
