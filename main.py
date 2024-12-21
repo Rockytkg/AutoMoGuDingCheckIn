@@ -60,7 +60,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
 
         # 判断自定义打卡日期模式并跳过打卡
         elif config.get_value("config.clockIn.mode") == "custom":
-            today = datetime.datetime.today().weekday() + 1  # 获取星期几（1-7）
+            today = datetime.today().weekday() + 1  # 获取星期几（1-7）
             if today not in config.get_value("config.clockIn.customDays"):
                 if config.get_value("config.clockIn.specialClockIn"):
                     return {
