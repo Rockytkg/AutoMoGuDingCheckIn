@@ -4,8 +4,7 @@ import logging
 import random
 import struct
 
-import cv2
-import numpy as np
+import ddddocr
 
 logger = logging.getLogger(__name__)
 
@@ -91,39 +90,11 @@ def slide_match(target_bytes: bytes = None, background_bytes: bytes = None) -> l
     Returns:
         list: 目标区域左边界坐标，右边界坐标。
     """
-    try:
-        # 解码滑块和背景图像为OpenCV格式
-        target = cv2.imdecode(
-            np.frombuffer(target_bytes, np.uint8), cv2.IMREAD_ANYCOLOR
-        )
-        background = cv2.imdecode(
-            np.frombuffer(background_bytes, np.uint8), cv2.IMREAD_ANYCOLOR
-        )
+    det = ddddocr.DdddOcr(ocr=False, show_ad=False)
+    res = det.slide_match(target_bytes, background_bytes)
+    x1, _, x2, _ = res["target"]
 
-        # 应用Canny边缘检测，将图像转换为二值图像
-        background = cv2.Canny(background, 100, 200)
-        target = cv2.Canny(target, 100, 200)
-
-        # 将二值图像转换为RGB格式，便于后续处理
-        background = cv2.cvtColor(background, cv2.COLOR_GRAY2RGB)
-        target = cv2.cvtColor(target, cv2.COLOR_GRAY2RGB)
-
-        # 使用模板匹配算法找到滑块在背景中的最佳匹配位置
-        res = cv2.matchTemplate(background, target, cv2.TM_CCOEFF_NORMED)
-        _, max_val, _, max_loc = cv2.minMaxLoc(res)  # 获取最大相似度及其对应位置
-
-        # 获取滑块的高度和宽度
-        h, w = target.shape[:2]
-
-        # 计算目标区域的右下角坐标
-        bottom_right = (max_loc[0] + w, max_loc[1] + h)
-
-        logger.info(f"滑块匹配成功，最大相似度: {max_val}")
-        return [int(max_loc[0]), int(bottom_right[0])]
-
-    except Exception as e:
-        logger.error(f"滑块匹配时发生错误: {e}")
-        raise
+    return [x1, x2]
 
 
 def recognize_captcha(target: str, background: str) -> str:
