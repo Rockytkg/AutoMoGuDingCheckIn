@@ -3,9 +3,10 @@ import json
 import logging
 import random
 import struct
+from io import BytesIO
 
-import cv2
-import numpy as np
+from PIL import Image
+import ddddocr
 
 logger = logging.getLogger(__name__)
 
@@ -91,42 +92,17 @@ def slide_match(target_bytes: bytes = None, background_bytes: bytes = None) -> l
     Returns:
         list: 目标区域左边界坐标，右边界坐标。
     """
-    try:
-        # 解码滑块和背景图像为OpenCV格式
-        target = cv2.imdecode(
-            np.frombuffer(target_bytes, np.uint8), cv2.IMREAD_ANYCOLOR
-        )
-        background = cv2.imdecode(
-            np.frombuffer(background_bytes, np.uint8), cv2.IMREAD_ANYCOLOR
-        )
+    # 初始化 ddddocr 的滑块检测对象，禁用广告显示
+    det = ddddocr.DdddOcr(det=False, ocr=False, show_ad=False)
 
-        # 应用Canny边缘检测，将图像转换为二值图像
-        background = cv2.Canny(background, 100, 200)
-        target = cv2.Canny(target, 100, 200)
+    # 调用 ddddocr 的 slide_match 方法进行滑块匹配
+    x1, _, x2, _ = det.slide_match(target_bytes, background_bytes).get("target")
 
-        # 将二值图像转换为RGB格式，便于后续处理
-        background = cv2.cvtColor(background, cv2.COLOR_GRAY2RGB)
-        target = cv2.cvtColor(target, cv2.COLOR_GRAY2RGB)
-
-        # 使用模板匹配算法找到滑块在背景中的最佳匹配位置
-        res = cv2.matchTemplate(background, target, cv2.TM_CCOEFF_NORMED)
-        _, max_val, _, max_loc = cv2.minMaxLoc(res)  # 获取最大相似度及其对应位置
-
-        # 获取滑块的高度和宽度
-        h, w = target.shape[:2]
-
-        # 计算目标区域的右下角坐标
-        bottom_right = (max_loc[0] + w, max_loc[1] + h)
-
-        logger.info(f"滑块匹配成功，最大相似度: {max_val}")
-        return [int(max_loc[0]), int(bottom_right[0])]
-
-    except Exception as e:
-        logger.error(f"滑块匹配时发生错误: {e}")
-        raise
+    # 返回结果
+    return [x1, x2]
 
 
-def recognize_captcha(target: str, background: str) -> str:
+def recognize_blockPuzzle_captcha(target: str, background: str) -> str:
     """
     识别图像验证码。
 
@@ -164,3 +140,62 @@ def recognize_captcha(target: str, background: str) -> str:
     except Exception as e:
         logger.error(f"验证码识别时发生错误: {e}")
         raise
+
+
+def recognize_clickWord_captcha(target: str, wordlist: list) -> str:
+    """
+    从给定的图像中识别点击文字验证码，并返回单词的坐标。
+
+    此函数初始化ddddocr检测器和识别器，以检测和识别验证码中的单词。然后，它使用识别到的单词为给定单词列表中的单词生成随机坐标。
+
+    Args:
+        target (str): base64编码的图像字符串。
+        wordlist (list): 要识别的单词列表。
+
+    Returns:
+        str: 单词列表中的单词的坐标的JSON字符串列表。
+
+    引发：
+        logger.warning: 在处理文本框时出错或未找到字符时。
+    """
+    target_bytes = base64.b64decode(target)
+
+    # 初始化ddddocr的检测器和识别器
+    det = ddddocr.DdddOcr(det=True, show_ad=False)
+    ocr = ddddocr.DdddOcr(
+        det=False,
+        ocr=False,
+        import_onnx_path="./models/01.onnx",
+        charsets_path="./models/charsets.json",
+        show_ad=False,
+    )
+
+    bboxes = det.detection(target_bytes)
+    image = Image.open(BytesIO(target_bytes))
+
+    # 识别每个文本框中的文本，并存储为字典以便快速查找
+    recognized_dict = {}
+    for bbox in bboxes:
+        try:
+            with BytesIO() as cropped_buffer:
+                image.crop(bbox).save(cropped_buffer, format="JPEG")
+                cropped_binary = cropped_buffer.getvalue()
+                text = ocr.classification(cropped_binary)
+                recognized_dict[text] = bbox
+        except Exception as e:
+            logger.warning(f"处理文本框时出错: {e}")
+
+    # 根据wordlist的顺序找到对应的文本框，并生成随机坐标
+    random_coordinates = []
+    for word in wordlist:
+        bbox = recognized_dict.get(word)
+        if bbox:
+            # 生成随机坐标
+            x = random.randint(bbox[0], bbox[2])
+            y = random.randint(bbox[1], bbox[3])
+            random_coordinates.append({"x": x, "y": y})
+        else:
+            logger.warning(f"未找到字符: {word}")
+            # 可以选择跳过或添加占位符
+            # random_coordinates.append("0,0")
+    return json.dumps(random_coordinates, separators=(",", ":"))
