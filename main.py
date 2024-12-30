@@ -193,7 +193,7 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
             "content": content,
             "attachments": attachments,
             "reportType": "day",
-            "jobId": job_info.get("jobId"),
+            "jobId": job_info.get("jobId", None),
             "reportTime": current_time.strftime("%Y-%m-%d %H:%M:%S"),
         }
         api_client.submit_report(report_info)
@@ -293,7 +293,7 @@ def submit_weekly_report(
             "reportType": "week",
             "endTime": current_week_info.get("endTime"),
             "startTime": current_week_info.get("startTime"),
-            "jobId": job_info.get("jobId"),
+            "jobId": job_info.get("jobId", None),
             "weeks": current_week_string,
         }
         api_client.submit_report(report_info)
@@ -396,7 +396,7 @@ def submit_monthly_report(
             "attachments": attachments,
             "yearmonth": current_yearmonth,
             "reportType": "month",
-            "jobId": job_info.get("jobId"),
+            "jobId": job_info.get("jobId", None),
         }
         api_client.submit_report(report_info)
 

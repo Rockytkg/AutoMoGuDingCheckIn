@@ -217,7 +217,8 @@ class ApiClient:
         }
         headers = self._get_authenticated_headers()
         rsp = self._post_request(url, headers, data, "获取岗位信息失败")
-        return rsp.get("data", {})
+        data = rsp.get("data", {})
+        return {} if data is None else data
 
     def get_submitted_reports_info(self, report_type: str) -> Dict[str, Any]:
         """
