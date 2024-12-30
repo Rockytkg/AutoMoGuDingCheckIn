@@ -49,7 +49,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
 
         # 判断是否为节假日模式并跳过打卡
         if config.get_value("config.clockIn.mode") == "holiday" and is_holiday():
-            if config.get_value("config.clockIn.specialClockIn"):
+            if not config.get_value("config.clockIn.specialClockIn"):
                 return {
                     "status": "skip",
                     "message": "今天是休息日，已跳过打卡",
@@ -62,7 +62,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
         elif config.get_value("config.clockIn.mode") == "custom":
             today = datetime.today().weekday() + 1  # 获取星期几（1-7）
             if today not in config.get_value("config.clockIn.customDays"):
-                if config.get_value("config.clockIn.specialClockIn"):
+                if not config.get_value("config.clockIn.specialClockIn"):
                     return {
                         "status": "skip",
                         "message": "今天不在设置打卡时间范围内，已跳过打卡",
