@@ -326,7 +326,7 @@ class ApiClient:
             "compState": None,
             "apply": None,
             "levelEntity": None,
-            "formFieldDtoList": [],
+            "formFieldDtoList": report_info.get("formFieldDtoList", []),
             "fieldEntityList": [],
             "feedback": None,
             "handleWay": None,
@@ -348,6 +348,30 @@ class ApiClient:
         headers = self._get_authenticated_headers()
         rsp = self._post_request(url, headers, data, "获取周报周期失败")
         return rsp.get("data", [])
+
+    def get_from_info(self, formType: int) -> list[Dict[str, Any]]:
+        """
+        获取子表单（问卷），并设置值
+        Args:
+            formType (int): 表单类型。日报：7，周报：8，月报：9
+        Returns:
+            list[Dict[str, Any]]: 问卷
+        """
+        url = "practice/paper/v2/info"
+        data = {"formType": formType, "t": aes_encrypt(str(int(time.time() * 1000)))}
+        headers = self._get_authenticated_headers()
+        rsp = self._post_request(url, headers, data, "获取问卷失败").get("data", {})
+        formFieldDtoList = rsp.get("formFieldDtoList", [])
+        # 没有问卷就直接返回
+        if not formFieldDtoList:
+            return formFieldDtoList
+        logger.info("检测到问卷，已自动填写")
+        # 有问卷就自动填写
+        for item in formFieldDtoList:
+            # 默认暂时就先选个 b 吧
+            item["value"] = "b"
+
+        return formFieldDtoList
 
     def get_checkin_info(self) -> Dict[str, Any]:
         """
