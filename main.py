@@ -118,7 +118,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
             "message": f"{display_type}打卡成功",
             "task_type": "打卡",
             "details": {
-                "姓名": user_name,
+                "姓名": config.get_value("userInfo.nikeName"),
                 "打卡类型": display_type,
                 "打卡时间": current_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "打卡地点": config.get_value("config.clockIn.location.address"),
