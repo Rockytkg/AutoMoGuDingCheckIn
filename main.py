@@ -442,12 +442,18 @@ def run(config: ConfigManager) -> None:
 
     try:
         api_client = ApiClient(config)
+        # 检查是否登录
         if not config.get_value("userInfo.token"):
             api_client.login()
-        if not config.get_value("planInfo.planId"):
+
+        logger.info("获取用户信息成功")
+        # 检查用户类型和计划信息
+        if config.get_value("userInfo.userType") == "teacher":
+            logger.info("用户身份为教师，跳过计划信息检查")
+        elif not config.get_value("planInfo.planId"):
             api_client.fetch_internship_plan()
-        else:
-            logger.info("使用本地数据")
+            logger.info("已获取实习计划信息")
+
     except Exception as e:
         error_message = f"获取API客户端失败: {str(e)}"
         logger.error(error_message)
