@@ -386,6 +386,8 @@ class ApiClient:
             ValueError: 如果获取打卡信息失败，抛出包含详细错误信息的异常。
         """
         url = "attendence/clock/v2/listSynchro"
+        if self.config.get_value("userInfo.userType") == "teacher":
+            url = "attendence/clock/teacher/v1/listSynchro"
         headers = self._get_authenticated_headers()
         data = {
             **get_current_month_info(),
@@ -407,7 +409,20 @@ class ApiClient:
         Raises:
             ValueError: 如果打卡提交失败，抛出包含详细错误信息的异常。
         """
-        url = "attendence/clock/v5/save"
+        url = "attendence/clock/teacher/v2/save"
+        sign_data = None
+        planId = self.config.get_value("planInfo.planId")
+
+        if self.config.get_value("userInfo.userType") != "teacher":
+            url = "attendence/clock/v5/save"
+            sign_data = [
+                self.config.get_value("config.device"),
+                checkin_info.get("type"),
+                planId,
+                self.config.get_value("userInfo.userId"),
+                self.config.get_value("config.clockIn.location.address"),
+            ]
+
         logger.info(f'打卡类型：{checkin_info.get("type")}')
 
         data = {
@@ -432,7 +447,7 @@ class ApiClient:
             "teacherNumber": None,
             "type": checkin_info.get("type"),
             "stuId": None,
-            "planId": self.config.get_value("planInfo.planId"),
+            "planId": planId,
             "attendanceType": None,
             "username": None,
             "attachments": checkin_info.get("attachments", None),
@@ -456,15 +471,7 @@ class ApiClient:
 
         data.update(self.config.get_value("config.clockIn.location"))
 
-        headers = self._get_authenticated_headers(
-            sign_data=[
-                self.config.get_value("config.device"),
-                checkin_info.get("type"),
-                self.config.get_value("planInfo.planId"),
-                self.config.get_value("userInfo.userId"),
-                self.config.get_value("config.clockIn.location.address"),
-            ]
-        )
+        headers = self._get_authenticated_headers(sign_data)
 
         self._post_request(url, headers, data, "打卡失败")
 
