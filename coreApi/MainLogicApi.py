@@ -77,6 +77,9 @@ class ApiClient:
             response.raise_for_status()
             rsp = response.json()
 
+            if rsp.get("code") == 200 and rsp.get("msg", "未知错误") == "302":
+                raise ValueError("打卡失败，触发行为验证码")
+
             if rsp.get("code") == 200 or rsp.get("code") == 6111:
                 return rsp
 
