@@ -76,6 +76,9 @@ class ApiClient:
             response.raise_for_status()
             rsp = response.json()
 
+            if rsp.get("code") == 200 and rsp.get("msg", "未知错误") == "302":
+                raise ValueError("打卡失败，触发行为验证码")
+
             if rsp.get("code") == 200 or rsp.get("code") == 6111:
                 return rsp
 
@@ -277,8 +280,9 @@ class ApiClient:
             "t": aes_encrypt(str(int(time.time() * 1000))),
         }
         headers = self._get_authenticated_headers()
-        rsp = self._post_request(url, headers, data)
-        return rsp.get("data", {})
+        rsp = self._post_request(url, headers, data, "获取岗位信息失败")
+        data = rsp.get("data", {})
+        return {} if data is None else data
 
     def get_submitted_reports_info(self, report_type: str) -> Dict[str, Any]:
         """
@@ -386,7 +390,7 @@ class ApiClient:
             "compState": None,
             "apply": None,
             "levelEntity": None,
-            "formFieldDtoList": [],
+            "formFieldDtoList": report_info.get("formFieldDtoList", []),
             "fieldEntityList": [],
             "feedback": None,
             "handleWay": None,
@@ -409,6 +413,30 @@ class ApiClient:
         rsp = self._post_request(url, headers, data)
         return rsp.get("data", [])
 
+    def get_from_info(self, formType: int) -> list[Dict[str, Any]]:
+        """
+        获取子表单（问卷），并设置值
+        Args:
+            formType (int): 表单类型。日报：7，周报：8，月报：9
+        Returns:
+            list[Dict[str, Any]]: 问卷
+        """
+        url = "practice/paper/v2/info"
+        data = {"formType": formType, "t": aes_encrypt(str(int(time.time() * 1000)))}
+        headers = self._get_authenticated_headers()
+        rsp = self._post_request(url, headers, data, "获取问卷失败").get("data", {})
+        formFieldDtoList = rsp.get("formFieldDtoList", [])
+        # 没有问卷就直接返回
+        if not formFieldDtoList:
+            return formFieldDtoList
+        logger.info("检测到问卷，已自动填写")
+        # 有问卷就自动填写
+        for item in formFieldDtoList:
+            # 默认暂时就先选个 b 吧
+            item["value"] = "b"
+
+        return formFieldDtoList
+
     def get_checkin_info(self) -> Dict[str, Any]:
         """
         获取用户的打卡信息。
@@ -422,6 +450,8 @@ class ApiClient:
             ValueError: 如果获取打卡信息失败，抛出包含详细错误信息的异常。
         """
         url = "attendence/clock/v2/listSynchro"
+        if self.config.get_value("userInfo.userType") == "teacher":
+            url = "attendence/clock/teacher/v1/listSynchro"
         headers = self._get_authenticated_headers()
         data = {
             **get_current_month_info(),
@@ -443,7 +473,20 @@ class ApiClient:
         Raises:
             ValueError: 如果打卡提交失败，抛出包含详细错误信息的异常。
         """
-        url = "attendence/clock/v5/save"
+        url = "attendence/clock/teacher/v2/save"
+        sign_data = None
+        planId = self.config.get_value("planInfo.planId")
+
+        if self.config.get_value("userInfo.userType") != "teacher":
+            url = "attendence/clock/v5/save"
+            sign_data = [
+                self.config.get_value("config.device"),
+                checkin_info.get("type"),
+                planId,
+                self.config.get_value("userInfo.userId"),
+                self.config.get_value("config.clockIn.location.address"),
+            ]
+
         logger.info(f'打卡类型：{checkin_info.get("type")}')
 
         data = {
@@ -468,7 +511,7 @@ class ApiClient:
             "teacherNumber": None,
             "type": checkin_info.get("type"),
             "stuId": None,
-            "planId": self.config.get_value("planInfo.planId"),
+            "planId": planId,
             "attendanceType": None,
             "username": None,
             "attachments": checkin_info.get("attachments", None),
@@ -492,15 +535,7 @@ class ApiClient:
 
         data.update(self.config.get_value("config.clockIn.location"))
 
-        headers = self._get_authenticated_headers(
-            sign_data=[
-                self.config.get_value("config.device"),
-                checkin_info.get("type"),
-                self.config.get_value("planInfo.planId"),
-                self.config.get_value("userInfo.userId"),
-                self.config.get_value("config.clockIn.location.address"),
-            ]
-        )
+        headers = self._get_authenticated_headers(sign_data)
 
         if self._post_request(url, headers, data).get("msg") == "302":
             logger.info("检测到行为验证码，正在通过···")

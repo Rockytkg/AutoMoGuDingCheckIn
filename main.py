@@ -49,7 +49,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
 
         # 判断是否为节假日模式并跳过打卡
         if config.get_value("config.clockIn.mode") == "holiday" and is_holiday():
-            if config.get_value("config.clockIn.specialClockIn"):
+            if not config.get_value("config.clockIn.specialClockIn"):
                 return {
                     "status": "skip",
                     "message": "今天是休息日，已跳过打卡",
@@ -62,7 +62,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
         elif config.get_value("config.clockIn.mode") == "custom":
             today = datetime.today().weekday() + 1  # 获取星期几（1-7）
             if today not in config.get_value("config.clockIn.customDays"):
-                if config.get_value("config.clockIn.specialClockIn"):
+                if not config.get_value("config.clockIn.specialClockIn"):
                     return {
                         "status": "skip",
                         "message": "今天不在设置打卡时间范围内，已跳过打卡",
@@ -118,7 +118,7 @@ def perform_clock_in(api_client: ApiClient, config: ConfigManager) -> Dict[str, 
             "message": f"{display_type}打卡成功",
             "task_type": "打卡",
             "details": {
-                "姓名": user_name,
+                "姓名": config.get_value("userInfo.nikeName"),
                 "打卡类型": display_type,
                 "打卡时间": current_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "打卡地点": config.get_value("config.clockIn.location.address"),
@@ -193,8 +193,9 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
             "content": content,
             "attachments": attachments,
             "reportType": "day",
-            "jobId": job_info.get("jobId"),
+            "jobId": job_info.get("jobId", None),
             "reportTime": current_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "formFieldDtoList": api_client.get_from_info(7),
         }
         api_client.submit_report(report_info)
 
@@ -293,8 +294,9 @@ def submit_weekly_report(
             "reportType": "week",
             "endTime": current_week_info.get("endTime"),
             "startTime": current_week_info.get("startTime"),
-            "jobId": job_info.get("jobId"),
+            "jobId": job_info.get("jobId", None),
             "weeks": current_week_string,
+            "formFieldDtoList": api_client.get_from_info(8),
         }
         api_client.submit_report(report_info)
 
@@ -396,7 +398,8 @@ def submit_monthly_report(
             "attachments": attachments,
             "yearmonth": current_yearmonth,
             "reportType": "month",
-            "jobId": job_info.get("jobId"),
+            "jobId": job_info.get("jobId", None),
+            "formFieldDtoList": api_client.get_from_info(9),
         }
         api_client.submit_report(report_info)
 
@@ -439,12 +442,18 @@ def run(config: ConfigManager) -> None:
 
     try:
         api_client = ApiClient(config)
+        # 检查是否登录
         if not config.get_value("userInfo.token"):
             api_client.login()
-        if not config.get_value("planInfo.planId"):
+
+        logger.info("获取用户信息成功")
+        # 检查用户类型和计划信息
+        if config.get_value("userInfo.userType") == "teacher":
+            logger.info("用户身份为教师，跳过计划信息检查")
+        elif not config.get_value("planInfo.planId"):
             api_client.fetch_internship_plan()
-        else:
-            logger.info("使用本地数据")
+            logger.info("已获取实习计划信息")
+
     except Exception as e:
         error_message = f"获取API客户端失败: {str(e)}"
         logger.error(error_message)
