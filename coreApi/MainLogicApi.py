@@ -154,7 +154,7 @@ class ApiClient:
                 )
             attempts += 1
             time.sleep(random.uniform(1, 3))
-        raise Exception("验证码验证失败超过最大尝试次数")
+        raise Exception("通过滑块验证码失败")
 
     def solve_click_word_captcha(self, max_retries: Optional[int] = 5) -> str:
         retry_count = 0
@@ -212,7 +212,7 @@ class ApiClient:
             time.sleep(random.uniform(1, 3))
 
         # 超过最大重试次数，抛出异常
-        raise Exception("验证码验证失败超过最大重试次数")
+        raise Exception("通过点选验证码失败")
 
     def login(self) -> None:
         """
@@ -504,6 +504,8 @@ class ApiClient:
 
         if self._post_request(url, headers, data).get("msg") == "302":
             logger.info("检测到行为验证码，正在通过···")
+            data["captcha"] = self.solve_click_word_captcha()
+            self._post_request(url, headers, data)
 
     def get_upload_token(self) -> str:
         """
