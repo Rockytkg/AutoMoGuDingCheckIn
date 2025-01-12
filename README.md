@@ -2,6 +2,26 @@
 
 AutoMoGuDingCheckIn 工学云自动打卡，采用新接口，更安全，支持多用户、自定义位置信息、保持登录状态、每日打卡检查、打卡位置浮动、消息推送，免服务器运行
 
+## 推荐使用 [CATKA打卡平台](https://catka666.shop/) - 简单易用，全网最低价！
+
+还在为繁琐的实习打卡烦恼吗？CATKA打卡平台，一键解决所有问题！
+
+**支持平台：** 工学云✔️ 校友邦✔️ 黔职通✔️ 学习通✔️ 习讯云✔️ 职校家园✔️ 云实习助手✔️
+
+**功能强大，操作简单：**
+
+* **自动打卡：** 每日上下班打卡，解放双手！
+* **自动报告：** 日周月报、总结、健康上报，一键搞定！
+* **多账户管理：** 支持多账户同时操作，效率翻倍！
+* **指定地区：** 精准定位，打卡无忧！
+* **多种推送方式：** 实时掌握打卡状态！
+* **批量操作：** 批量导入实习账号，批量补卡补报告，省时省力！
+
+**全网最低价，性价比之王！**
+**目前打卡仅需 1 毛钱一天，报告免费！**
+
+立即体验 [CATKA打卡平台](https://catka666.shop/)，告别繁琐打卡，轻松实习！
+
 ## 项目概述
 
 AutoMoGuDingCheckIn 旨在：
@@ -378,3 +398,5 @@ python main.py
 ## start
 
 [![Stargazers over time](https://starchart.cc/Rockytkg/AutoMoGuDingCheckIn.svg?variant=adaptive)](https://starchart.cc/Rockytkg/AutoMoGuDingCheckIn)
+
+---
