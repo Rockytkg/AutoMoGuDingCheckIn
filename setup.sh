@@ -92,6 +92,10 @@ run_main_script() {
     fi
 }
 
+# 获取脚本所在的绝对路径并切换到该目录
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+cd "$SCRIPT_DIR" || { echo "无法切换到脚本目录: $SCRIPT_DIR"; exit 1; }
+
 # 检查是否是首次运行
 if [ ! -f ".initialized" ]; then
     echo "首次运行脚本，执行初始化..."
