@@ -20,6 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10  # 添加超时限制
 
+    permissions:
+      actions: write
+      contents: read
+      
     steps:
       # 设置时区为 Asia/Shanghai
       - name: Set timezone
