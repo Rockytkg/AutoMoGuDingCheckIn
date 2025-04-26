@@ -2,12 +2,12 @@ name: "打卡"
 
 # 明确触发条件
 on:
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch: # 手动触发
   schedule:
     # 使用 UTC 时间，UTC 时间 对应 北京时间 -8 小时
-    - cron: "0 0 * * *"  # UTC 00:00 / 北京时间 08:00
-    - cron: "0 1 * * *"  # UTC 01:00 / 北京时间 09:00
-    - cron: "0 9 * * *"  # UTC 09:00 / 北京时间 17:00
+    - cron: "0 0 * * *" # UTC 00:00 / 北京时间 08:00
+    - cron: "0 1 * * *" # UTC 01:00 / 北京时间 09:00
+    - cron: "0 9 * * *" # UTC 09:00 / 北京时间 17:00
     - cron: "0 10 * * *" # UTC 10:00 / 北京时间 18:00
 
 # 配置并发控制，避免任务重叠执行
@@ -18,12 +18,12 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10  # 添加超时限制
+    timeout-minutes: 10 # 添加超时限制
 
     permissions:
       actions: write
       contents: read
-      
+
     steps:
       # 设置时区为 Asia/Shanghai
       - name: Set timezone
@@ -35,15 +35,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # 优化克隆深度
+          fetch-depth: 1 # 优化克隆深度
 
       # 设置 Python 环境
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-          cache: 'pip'  # 启用 pip 缓存
-          check-latest: true  # 检查是否有更新的补丁版本
+          python-version: "3.10"
+          cache: "pip" # 启用 pip 缓存
+          check-latest: true # 检查是否有更新的补丁版本
 
       # 缓存 pip 依赖
       - name: Cache pip packages
@@ -64,10 +64,10 @@ jobs:
       - name: Run sign in script
         env:
           USER: ${{ secrets.USER }}
-          TZ: Asia/Shanghai  # 确保脚本运行时也使用正确的时区
+          TZ: Asia/Shanghai # 确保脚本运行时也使用正确的时区
         run: |
           python main.py
-          
+
       - name: Clean up workflow runs
         if: always()
         uses: Mattraks/delete-workflow-runs@v2

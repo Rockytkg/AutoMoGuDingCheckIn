@@ -25,7 +25,7 @@ class MessagePusher:
         """
         self.push_config = push_config
 
-    def push(self, results: List[Dict[str, Any]]) -> bool:
+    def push(self, results: List[Dict[str, Any]]) -> None:
         """
         推送消息。
 
@@ -35,6 +35,11 @@ class MessagePusher:
         Returns:
             bool: 是否推送成功。
         """
+        skip_count = sum(1 for result in results if result.get("status") == "skip")
+        if skip_count == len(results):
+            logger.info("所有任务都被跳过，不发送推送消息")
+            return
+
         success_count = sum(r.get("status") == "success" for r in results)
         status_emoji = "🎉" if success_count == len(results) else "📊"
         title = f"{status_emoji} 工学云报告 ({success_count}/{len(results)})"
@@ -158,8 +163,8 @@ class MessagePusher:
         msg["From"] = formataddr(
             (Header(config["from"], "utf-8").encode(), config["username"])
         )
-        msg["To"] = Header(config["to"], "utf-8")
-        msg["Subject"] = Header(title, "utf-8")
+        msg["To"] = Header(config["to"], "utf-8").encode()
+        msg["Subject"] = Header(title, "utf-8").encode()
 
         # 添加邮件内容
         msg.attach(MIMEText(content, "html", "utf-8"))
