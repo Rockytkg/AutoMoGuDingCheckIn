@@ -16,13 +16,13 @@ initialize_environment() {
     check_and_install() {
         PACKAGE_NAME=$1
         PACKAGE_CMD=$2
-        if ! command -v $PACKAGE_CMD &>/dev/null; then
+        if ! command -v "$PACKAGE_CMD" &>/dev/null; then
             echo "$PACKAGE_NAME 未安装，正在尝试安装..."
             if [[ "$OSTYPE" == "linux-gnu"* ]]; then
                 sudo apt-get update
-                sudo apt-get install -y $PACKAGE_NAME
+                sudo apt-get install -y "$PACKAGE_NAME"
             elif [[ "$OSTYPE" == "darwin"* ]]; then
-                brew install $PACKAGE_NAME
+                brew install "$PACKAGE_NAME"
             else
                 echo "不支持的操作系统，无法安装 $PACKAGE_NAME"
                 exit 1

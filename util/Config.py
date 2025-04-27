@@ -43,7 +43,7 @@ class ConfigManager:
         """
         try:
             # 打开并加载配置文件
-            with self._path.open("r", encoding="utf-8") as jsonfile:
+            with open(str(self._path), "r", encoding="utf-8") as jsonfile:
                 config = json.load(jsonfile)
 
             # 确保 config 和 clockIn 字典存在

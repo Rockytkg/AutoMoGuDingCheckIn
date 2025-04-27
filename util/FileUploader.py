@@ -21,7 +21,7 @@ def process_image(image_path: str) -> bytes:
     # 打开原始图片
     with Image.open(image_path) as img:
         # 如果图片格式不是JPEG，则转换为RGB模式
-        if img.format.lower() != "jpeg":
+        if (img.format is None) or (str(img.format).upper() != "JPEG"):
             img = img.convert("RGB")
 
         # 定义文件大小上限（1MB）

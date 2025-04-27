@@ -107,7 +107,7 @@ class ApiClient:
 
         return self._post_request(url, headers, data, retry_count + 1)
 
-    def pass_blockPuzzle_captcha(self, max_attempts: Optional[int] = 5) -> str:
+    def pass_blockPuzzle_captcha(self, max_attempts: int = 5) -> str:
         """
         通过行为验证码（验证码类型为blockPuzzle）。
 
@@ -159,7 +159,7 @@ class ApiClient:
             time.sleep(random.uniform(1, 3))
         raise Exception("通过滑块验证码失败")
 
-    def solve_click_word_captcha(self, max_retries: Optional[int] = 5) -> str:
+    def solve_click_word_captcha(self, max_retries: int = 5) -> str:
         retry_count = 0
         while retry_count < max_retries:
 
@@ -280,7 +280,7 @@ class ApiClient:
             "t": aes_encrypt(str(int(time.time() * 1000))),
         }
         headers = self._get_authenticated_headers()
-        rsp = self._post_request(url, headers, data, "获取岗位信息失败")
+        rsp = self._post_request(url, headers, data, retry_count=3)
         data = rsp.get("data", {})
         return {} if data is None else data
 
@@ -424,7 +424,7 @@ class ApiClient:
         url = "practice/paper/v2/info"
         data = {"formType": formType, "t": aes_encrypt(str(int(time.time() * 1000)))}
         headers = self._get_authenticated_headers()
-        rsp = self._post_request(url, headers, data, "获取问卷失败").get("data", {})
+        rsp = self._post_request(url, headers, data).get("data", {})
         formFieldDtoList = rsp.get("formFieldDtoList", [])
         # 没有问卷就直接返回
         if not formFieldDtoList:
@@ -558,7 +558,7 @@ class ApiClient:
         return rsp.get("data", "")
 
     def _get_authenticated_headers(
-        self, sign_data: Optional[List[str]] = None
+        self, sign_data: Optional[List[Optional[str]]] = None  # 允许 List[str | None]
     ) -> Dict[str, str]:
         """
         生成带有认证信息的请求头。

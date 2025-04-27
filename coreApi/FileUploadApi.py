@@ -36,7 +36,7 @@ def upload_image(
     key: str,
     max_retries: int = 3,
     retry_delay: int = 5,
-) -> str:
+) -> str | None:
     """
     上传单张图片并处理错误。
 

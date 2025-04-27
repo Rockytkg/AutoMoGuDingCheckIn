@@ -4,6 +4,7 @@ import logging
 import random
 import struct
 
+from cv2.typing import MatLike
 import numpy as np
 import onnxruntime as ort
 import cv2
@@ -81,7 +82,7 @@ def extract_png_width(png_binary: bytes) -> int:
         raise
 
 
-def slide_match(target_bytes: bytes = None, background_bytes: bytes = None) -> list:
+def slide_match(target_bytes: bytes, background_bytes: bytes) -> list:
     """
     获取验证区域坐标，使用目标检测算法。
 
@@ -168,7 +169,7 @@ def recognize_blockPuzzle_captcha(target: str, background: str) -> str:
 
 
 def detect_objects(
-    model_path: str, image_data: bytes, use_gpu: bool = False
+    model_path: str, image_data: MatLike, use_gpu: bool = False
 ) -> list[list[int]]:
     """
     使用ONNX模型进行目标检测。
