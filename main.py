@@ -510,16 +510,23 @@ def execute_tasks(selected_files: Optional[List[str]] = None):
         json_files = list(existing_files)
 
     # 从环境变量获取配置
-    try:
-        user_env = os.getenv("USER", "[]")
-        user_configs = json.loads(user_env)
-        if not isinstance(user_configs, list):
-            raise ValueError("环境变量 USER 必须包含 JSON 数组")
-        logger.info(f"从环境变量中获取到 {len(user_configs)} 个配置")
-    except (json.JSONDecodeError, ValueError) as e:
-        logger.error(f"解析环境变量 USER 失败: {e}")
-        user_configs = []
-
+    user_env = os.getenv("USER")
+    user_configs = []
+    if user_env and user_env.strip():
+        try:
+            user_configs = json.loads(user_env)
+            if not isinstance(user_configs, list):
+                logger.error("环境变量 USER 必须包含 JSON 数组")
+                user_configs = [] 
+            else:
+                logger.info(f"从环境变量中获取到 {len(user_configs)} 个配置")
+        except json.JSONDecodeError as e:
+            logger.error(f"USER 不是有效的JSON格式: {e}")
+            user_configs = []
+        except Exception as e:
+            logger.error(f"解析USER时发生意外错误: {e}")
+            user_configs = []
+    
     # 检查是否存在有效配置
     if not json_files and not user_configs:
         logger.warning("未找到任何有效配置")

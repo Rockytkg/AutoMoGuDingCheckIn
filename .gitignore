@@ -37,3 +37,5 @@ coverage.xml
 
 # Cython debug symbols
 cython_debug/
+
+user/test.json
