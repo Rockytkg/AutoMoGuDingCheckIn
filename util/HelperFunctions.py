@@ -1,3 +1,4 @@
+import re
 import logging
 from datetime import datetime, timedelta
 
@@ -47,7 +48,7 @@ def desensitize_name(name: str) -> str:
         str: 脱敏后的姓名。
     """
     name = name.strip()  # 去除前后空格，防止输入有空格影响判断
-    
+
     n = len(name)
     if n < 3:
         return f"{name[0]}*"
@@ -86,3 +87,77 @@ def is_holiday(current_datetime: datetime = datetime.now()) -> bool:
     # 如果不是节假日，检查是否为周末
     is_weekend = current_datetime.weekday() > 4  # 周末为星期六（5）和星期日（6）
     return is_weekend
+
+
+def strip_markdown(text):
+    """
+    过滤Markdown标记，保留文本内容和换行符
+
+    Args:
+        text (str): 包含Markdown标记的原始文本
+
+    Returns:
+        str: 过滤后的纯文本
+    """
+    # 1. 移除注释
+    text = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
+
+    # 2. 移除代码块 (保留代码内容)
+    text = re.sub(r"```[a-zA-Z0-9]*\n([\s\S]*?)\n```", r"\1", text)
+
+    # 3. 移除行内代码标记
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+
+    # 4. 移除图片标记 (保留alt文本)
+    text = re.sub(r"!\[(.*?)\]\(.*?\)", r"\1", text)
+
+    # 5. 移除超链接标记 (保留链接文本)
+    text = re.sub(r"\[(.*?)\]\(.*?\)", r"\1", text)
+
+    # 6. 移除脚注引用 例如 [^1]
+    text = re.sub(r"\[\^([^\]]+)\]", "", text)
+
+    # 7. 移除脚注定义 例如 [^1]: some text
+    text = re.sub(r"^\[\^.+?\]:.*$", "", text, flags=re.MULTILINE)
+
+    # 8. 移除表格分隔（仅去除 | 和 ---、不动表格实际内容）
+    text = re.sub(
+        r"^\s*\|?(?:\s*[:-]+\s*\|)+\s*[:-]+\s*\|?\s*$", "", text, flags=re.MULTILINE
+    )
+    text = re.sub(r"\|", " ", text)  # 用空格替掉行内|
+
+    # 9. 移除水平分割线
+    text = re.sub(r"^\s*([-*_])[ \1]{2,}\s*$", "", text, flags=re.MULTILINE)
+
+    # 10. 移除删除线
+    text = re.sub(r"~~(.*?)~~", r"\1", text)
+
+    # 11. 移除粗体和斜体标记
+    text = re.sub(r"\*\*\*(.*?)\*\*\*", r"\1", text)  # ***bold italic***
+    text = re.sub(r"___(.*?)___", r"\1", text)
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)  # **bold**
+    text = re.sub(r"__(.*?)__", r"\1", text)  # __bold__
+    text = re.sub(r"\*(.*?)\*", r"\1", text)  # *italic*
+    text = re.sub(r"_(.*?)_", r"\1", text)  # _italic_
+
+    # 12. 移除标题标记 (保留标题文本)
+    text = re.sub(r"^#{1,6}\s+(.*)$", r"\1", text, flags=re.MULTILINE)
+
+    # 13. 移除列表标记
+    text = re.sub(
+        r"^(\s*)[-*+]\s+\[.\]\s+", r"\1", text, flags=re.MULTILINE
+    )  # 任务列表勾选框
+    text = re.sub(r"^(\s*)[-*+]\s+", r"\1", text, flags=re.MULTILINE)
+    text = re.sub(r"^(\s*)\d+\.\s+", r"\1", text, flags=re.MULTILINE)
+
+    # 14. 移除引用标记
+    text = re.sub(r"^>\s+", "", text, flags=re.MULTILINE)
+
+    # 15. 移除行内HTML标签
+    text = re.sub(r"</?[^>]+>", "", text)
+
+    # 16. 多空白行合并
+    text = re.sub(r"\n\s*\n", "\n\n", text)
+    text = text.strip()
+
+    return text

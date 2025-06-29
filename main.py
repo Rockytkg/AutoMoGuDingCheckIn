@@ -178,7 +178,12 @@ def submit_daily_report(api_client: ApiClient, config: ConfigManager) -> Dict[st
 
         job_info = api_client.get_job_info()
         report_count = submitted_reports_info.get("flag", 0) + 1
-        content = generate_article(config, f"第{report_count}天日报", job_info)
+        content = generate_article(
+            config,
+            f"第{report_count}天日报",
+            job_info,
+            config.get_value("planInfo.planPaper.dayPaperNum"),
+        )
 
         # 上传图片并获取附件
         attachments = upload_img(
@@ -277,7 +282,12 @@ def submit_weekly_report(
                 }
 
         job_info = api_client.get_job_info()
-        content = generate_article(config, f"第{week}周周报", job_info)
+        content = generate_article(
+            config,
+            f"第{week}周周报",
+            job_info,
+            config.get_value("planInfo.planPaper.weekPaperNum"),
+        )
 
         # 上传图片并获取附件
         attachments = upload_img(
@@ -382,7 +392,12 @@ def submit_monthly_report(
 
         job_info = api_client.get_job_info()
         month = submitted_reports_info.get("flag", 0) + 1
-        content = generate_article(config, f"第{month}月月报", job_info)
+        content = generate_article(
+            config,
+            f"第{month}月月报",
+            job_info,
+            config.get_value("planInfo.planPaper.monthPaperNum"),
+        )
 
         # 上传图片并获取附件
         attachments = upload_img(
@@ -517,7 +532,7 @@ def execute_tasks(selected_files: Optional[List[str]] = None):
             user_configs = json.loads(user_env)
             if not isinstance(user_configs, list):
                 logger.error("环境变量 USER 必须包含 JSON 数组")
-                user_configs = [] 
+                user_configs = []
             else:
                 logger.info(f"从环境变量中获取到 {len(user_configs)} 个配置")
         except json.JSONDecodeError as e:
@@ -526,7 +541,7 @@ def execute_tasks(selected_files: Optional[List[str]] = None):
         except Exception as e:
             logger.error(f"解析USER时发生意外错误: {e}")
             user_configs = []
-    
+
     # 检查是否存在有效配置
     if not json_files and not user_configs:
         logger.warning("未找到任何有效配置")
