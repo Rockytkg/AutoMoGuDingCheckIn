@@ -163,7 +163,7 @@ class MessagePusher:
         msg["From"] = formataddr(
             (Header(config["from"], "utf-8").encode(), config["username"])
         )
-        msg["To"] = Header(config["to"], "utf-8")
+        msg["To"] = config["to"]
         msg["Subject"] = Header(title, "utf-8").encode()
 
         # 添加邮件内容
